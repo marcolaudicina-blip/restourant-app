@@ -20,3 +20,4 @@ export * from "./availability.js";
 export * from "./schemas/reservation.js";
 export * from "./phone.js";
 export * from "./schemas/guest.js";
+export * from "./schemas/booking-page.js";

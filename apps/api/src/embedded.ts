@@ -63,3 +63,19 @@ export async function callEmbeddedApi(request: EmbeddedRequest): Promise<Embedde
     body: response.body,
   };
 }
+
+/** GET returning raw bytes, for pictures. */
+export async function callEmbeddedApiBinary(url: string) {
+  const app = await getApp();
+  const response = await app.inject({ method: "GET", url });
+  const header = (name: string) => {
+    const value = response.headers[name];
+    return typeof value === "string" ? value : null;
+  };
+  return {
+    status: response.statusCode,
+    contentType: header("content-type") ?? "application/octet-stream",
+    cacheControl: header("cache-control"),
+    body: new Uint8Array(response.rawPayload),
+  };
+}

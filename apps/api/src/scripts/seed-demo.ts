@@ -8,7 +8,7 @@
  * app; the one exception is `markOnlineBookings`, see there.
  */
 import { randomBytes } from "node:crypto";
-import { createDatabase, memberships, reservations, users } from "@restourant/db";
+import { bookingPages, createDatabase, memberships, reservations, users } from "@restourant/db";
 import { addDays, instantToLocal } from "@restourant/shared";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { buildApp } from "../app.js";
@@ -59,10 +59,12 @@ try {
   const login = await app.inject({ method: "POST", url: "/v1/auth/login", payload: { email, password } });
   if (login.statusCode === 200) {
     console.log(`Demo account ${email} already exists`);
+    token = (login.json() as { data: { token: string } }).data.token;
   } else {
     await seed();
   }
   await markOnlineBookings();
+  await styleBookingPage();
 } finally {
   await app.close();
   await database.close();
@@ -194,19 +196,42 @@ async function seed() {
   console.log(`Demo restaurant created for ${email}: ${created} reservations on ${openDays.join(", ")}`);
 }
 
+async function demoRestaurantId(): Promise<string | null> {
+  const [owner] = await database.db
+    .select({ restaurantId: memberships.restaurantId })
+    .from(memberships)
+    .innerJoin(users, eq(users.id, memberships.userId))
+    .where(eq(sql`lower(${users.email})`, email!.toLowerCase()));
+  return owner?.restaurantId ?? null;
+}
+
+/** Colors and words of the public booking page, once: the owner may restyle it afterwards. */
+async function styleBookingPage() {
+  const restaurantId = await demoRestaurantId();
+  if (!restaurantId) return;
+  const [page] = await database.db
+    .select({ id: bookingPages.restaurantId })
+    .from(bookingPages)
+    .where(eq(bookingPages.restaurantId, restaurantId));
+  if (page) return;
+  const styled = await call<{ slug: string }>("PATCH", `/restaurants/${restaurantId}/booking-page`, {
+    brandColor: "#7a1f2b",
+    description:
+      "Cucina di casa nel cuore di Palermo: pasta fresca fatta a mano, pesce del giorno e i dolci della nonna. " +
+      "D'estate si cena nel dehors sotto il pergolato.",
+  });
+  console.log(`Demo: booking page styled at /prenota/${styled.slug}`);
+}
+
 /**
  * Staff cannot create online bookings through the API (only the public booking page will), so the
  * demo marks a few of its bookings as online directly, once, to show how they stand out in the app.
  */
 async function markOnlineBookings() {
   const db = database.db;
-  const [owner] = await db
-    .select({ restaurantId: memberships.restaurantId })
-    .from(memberships)
-    .innerJoin(users, eq(users.id, memberships.userId))
-    .where(eq(sql`lower(${users.email})`, email!.toLowerCase()));
-  if (!owner) return;
-  const scope = eq(reservations.restaurantId, owner.restaurantId);
+  const restaurantId = await demoRestaurantId();
+  if (!restaurantId) return;
+  const scope = eq(reservations.restaurantId, restaurantId);
   const [existing] = await db
     .select({ id: reservations.id })
     .from(reservations)

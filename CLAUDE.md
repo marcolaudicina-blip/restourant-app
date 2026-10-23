@@ -66,6 +66,11 @@ pnpm db:migrate      # applies migrations to $DATABASE_URL
   email) in `matchGuest`, inside the reservation transaction; profiles are created on first contact.
   Stats (visits, no-shows…) are computed from reservations, never stored. Deleting a guest anonymizes
   their reservations. Migration 0004 backfilled profiles with SQL mirroring `normalizePhone`.
+- **Public booking page** (modules/public, no auth, `/v1/public/*`, found by restaurant `slug`):
+  profile, open days, availability and booking for guests. Online bookings go through the same
+  engine with `channel: "online"`; `insertReservation` is shared with staff bookings. Only what a guest
+  may see leaves these routes (no tables). Page look and pictures are in modules/booking-page;
+  pictures are `bytea` rows in `media`, uploaded as data URLs and served immutable by id.
 - Drizzle uses `casing: "snake_case"`: write camelCase in TypeScript, columns are snake_case.
 
 ## Web app
@@ -81,6 +86,10 @@ pnpm db:migrate      # applies migrations to $DATABASE_URL
   (or `useConfigSave` on configuration screens), which invalidates the affected query families.
 - The selected day is in the URL (`?data=YYYY-MM-DD`, `useSelectedDate`). Reservations refetch every 20s
   so devices in the room stay in sync (no websockets yet).
+- `/prenota/[slug]` is the public booking page (`components/booking`), open to everyone and the only
+  route that may be framed (`?embed=1`). It lays out with container queries (`@3xl:`), so the
+  settings preview can render it at phone width. Pictures go through `/api/media/[id]`
+  (`callApiBinary`).
 - UI primitives are in `src/components/ui`; copy is Italian, labels for API codes in `src/lib/labels.ts`.
 
 ## Testing

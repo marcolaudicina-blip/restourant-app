@@ -15,7 +15,9 @@ storico modifiche.
    orari disponibili, sala con spostamento e unione dei tavoli, editor della disposizione,
    configurazione completa. Da fare: aggiornamento istantaneo (oggi ogni 20 secondi), griglia
    sale × orari, app per telefono
-4. ⏳ **Pagina di prenotazione pubblica** e widget per il sito
+4. ✅ **Pagina di prenotazione pubblica** con colori, logo, copertina e foto del locale, link da
+   condividere, pulsante e modulo da inserire nel sito (vedi `pagina-prenotazione.md`). Da fare:
+   link per modificare o disdire, versione in inglese, QR code
 5. ⏳ **Email** di conferma, promemoria, modifica e cancellazione
 6. ✅ **Scheda cliente**: creata in automatico dalle prenotazioni e riconosciuta dal telefono, note
    permanenti, etichette, visite / coperti / no-show / cancellazioni, storico, cancellazione con

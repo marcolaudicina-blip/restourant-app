@@ -42,7 +42,11 @@ export function seatingOptions(
   });
 }
 
-function onlineDayReason(floor: FloorContext, query: AvailabilityQuery, now: Date): OnlineDayReason | null {
+export function onlineDayReason(
+  floor: FloorContext,
+  query: AvailabilityQuery,
+  now: Date,
+): OnlineDayReason | null {
   const policy = floor.policy;
   if (!policy.onlineEnabled) return "online_disabled";
   const today = instantToLocal(now, floor.timezone).date;

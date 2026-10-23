@@ -9,6 +9,7 @@ import {
   pacingViolation,
   slotWindows,
   timeToMinutes,
+  type ReservationChannel,
   type ReservationCreateInput,
   type ReservationStatus,
   type ReservationTablesInput,
@@ -285,6 +286,8 @@ function seat(
 
 async function writeTables(ctx: TenantContext, reservation: ReservationRow, tableIds: string[]) {
   await ctx.db.delete(reservationTables).where(eq(reservationTables.reservationId, reservation.id));
+  // Group requests from the booking page can wait for staff to pick the tables.
+  if (tableIds.length === 0) return;
   await ctx.db.insert(reservationTables).values(
     tableIds.map((tableId) => ({
       restaurantId: ctx.restaurantId,
@@ -300,6 +303,75 @@ async function writeTables(ctx: TenantContext, reservation: ReservationRow, tabl
 // ---------------------------------------------------------------------------------------------
 // Writing
 // ---------------------------------------------------------------------------------------------
+
+/** Writes a new booking, its tables and the matched guest in one transaction. Returns its id. */
+export async function insertReservation(
+  ctx: TenantContext,
+  floor: FloorContext,
+  args: {
+    service: Service | null;
+    start: number;
+    seating: Pick<Seating, "tableIds" | "durationMinutes">;
+    status: ReservationStatus;
+    channel: ReservationChannel;
+    input: Pick<
+      ReservationCreateInput,
+      | "date"
+      | "time"
+      | "partySize"
+      | "guestId"
+      | "guestName"
+      | "guestPhone"
+      | "guestEmail"
+      | "guestNote"
+      | "internalNote"
+      | "roomId"
+    >;
+    audit: unknown;
+  },
+): Promise<string> {
+  const { input, seating, status } = args;
+  return inTransaction(ctx, async (tx) => {
+    const guestId = await matchGuest(tx, {
+      guestId: input.guestId,
+      name: input.guestName,
+      phone: input.guestPhone,
+      email: input.guestEmail,
+    });
+    const [row] = await tx.db
+      .insert(reservations)
+      .values({
+        restaurantId: ctx.restaurantId,
+        guestId,
+        serviceId: args.service?.id ?? null,
+        date: input.date,
+        startTime: input.time,
+        startsAt: floor.instantAt(args.start),
+        endsAt: floor.instantAt(args.start + seating.durationMinutes),
+        durationMinutes: seating.durationMinutes,
+        partySize: input.partySize,
+        status,
+        channel: args.channel,
+        guestName: input.guestName,
+        guestPhone: input.guestPhone ?? null,
+        guestEmail: input.guestEmail ?? null,
+        guestNote: input.guestNote ?? null,
+        internalNote: input.internalNote ?? null,
+        requestedRoomId: input.roomId ?? null,
+        createdByUserId: ctx.actorUserId,
+        seatedAt: status === "seated" ? new Date() : null,
+      })
+      .returning();
+    await writeTables(tx, row!, seating.tableIds);
+    await recordAudit(tx, {
+      entity: "reservation",
+      entityId: row!.id,
+      action: "create",
+      changes: args.audit,
+    });
+    return row!.id;
+  });
+}
 
 export async function createReservation(
   ctx: TenantContext,
@@ -322,45 +394,14 @@ export async function createReservation(
     ignoreCapacity: input.ignoreCapacity ?? false,
   });
 
-  const id = await inTransaction(ctx, async (tx) => {
-    const guestId = await matchGuest(tx, {
-      guestId: input.guestId,
-      name: input.guestName,
-      phone: input.guestPhone,
-      email: input.guestEmail,
-    });
-    const [row] = await tx.db
-      .insert(reservations)
-      .values({
-        restaurantId: ctx.restaurantId,
-        guestId,
-        serviceId: service?.id ?? null,
-        date: input.date,
-        startTime: input.time,
-        startsAt: floor.instantAt(start),
-        endsAt: floor.instantAt(start + seating.durationMinutes),
-        durationMinutes: seating.durationMinutes,
-        partySize: input.partySize,
-        status,
-        channel,
-        guestName: input.guestName,
-        guestPhone: input.guestPhone ?? null,
-        guestEmail: input.guestEmail ?? null,
-        guestNote: input.guestNote ?? null,
-        internalNote: input.internalNote ?? null,
-        requestedRoomId: input.roomId ?? null,
-        createdByUserId: ctx.actorUserId,
-        seatedAt: status === "seated" ? new Date() : null,
-      })
-      .returning();
-    await writeTables(tx, row!, seating.tableIds);
-    await recordAudit(tx, {
-      entity: "reservation",
-      entityId: row!.id,
-      action: "create",
-      changes: { ...input, tableIds: seating.tableIds, assignedBy: seating.option ? "system" : "staff" },
-    });
-    return row!.id;
+  const id = await insertReservation(ctx, floor, {
+    service,
+    start,
+    seating,
+    status,
+    channel,
+    input,
+    audit: { ...input, tableIds: seating.tableIds, assignedBy: seating.option ? "system" : "staff" },
   });
   return getReservation(ctx, id);
 }

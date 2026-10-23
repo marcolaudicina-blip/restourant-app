@@ -12,6 +12,7 @@ const SECTIONS = [
   { href: "/configurazione/orari", label: "Orari e servizi" },
   { href: "/configurazione/durate", label: "Durata dei tavoli" },
   { href: "/configurazione/regole", label: "Regole di prenotazione" },
+  { href: "/configurazione/pagina", label: "Pagina di prenotazione" },
   { href: "/configurazione/tavoli", label: "Sale e tavoli" },
   { href: "/configurazione/combinazioni", label: "Combinazioni" },
   { href: "/configurazione/chiusure", label: "Chiusure" },

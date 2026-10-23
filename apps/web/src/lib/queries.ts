@@ -3,7 +3,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./api";
 import { useRestaurant } from "./restaurant";
-import type { Availability, ConfigSnapshot, Guest, GuestDetail, Me, Reservation, Template } from "./types";
+import type {
+  Availability,
+  BookingPageSettings,
+  ConfigSnapshot,
+  Guest,
+  GuestDetail,
+  Me,
+  Reservation,
+  Template,
+} from "./types";
 
 export const keys = {
   me: ["me"] as const,
@@ -24,6 +33,15 @@ export function useConfig() {
   return useQuery({
     queryKey: keys.config(restaurantId),
     queryFn: () => api<ConfigSnapshot>(`${base}/config`),
+  });
+}
+
+/** Look and link of the public booking page. Under "config", so configuration saves refresh it. */
+export function useBookingPage() {
+  const { restaurantId, base } = useRestaurant();
+  return useQuery({
+    queryKey: [...keys.config(restaurantId), "booking-page"],
+    queryFn: () => api<BookingPageSettings>(`${base}/booking-page`),
   });
 }
 

@@ -20,10 +20,12 @@ import {
 } from "./lib/errors.js";
 import { authenticate, restaurantScope } from "./plugins/auth.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
+import { bookingPageRoutes } from "./modules/booking-page/booking-page.routes.js";
 import { calendarExceptionRoutes } from "./modules/calendar-exceptions/calendar-exceptions.routes.js";
 import { combinationRoutes } from "./modules/combinations/combinations.routes.js";
 import { durationRuleRoutes } from "./modules/duration-rules/duration-rules.routes.js";
 import { guestRoutes } from "./modules/guests/guests.routes.js";
+import { publicRoutes } from "./modules/public/public.routes.js";
 import { reservationRoutes } from "./modules/reservations/reservations.routes.js";
 import { restaurantRoutes } from "./modules/restaurants/restaurants.routes.js";
 import { roomRoutes } from "./modules/rooms/rooms.routes.js";
@@ -131,6 +133,7 @@ export async function buildApp(options: BuildAppOptions) {
   await app.register(
     async (v1) => {
       await v1.register(authRoutes);
+      await v1.register(publicRoutes, { prefix: "/public" });
 
       v1.get("/templates", async (request) => {
         await authenticate(request);
@@ -151,6 +154,7 @@ export async function buildApp(options: BuildAppOptions) {
           await scope.register(setupRoutes);
           await scope.register(reservationRoutes);
           await scope.register(guestRoutes);
+          await scope.register(bookingPageRoutes);
         },
         { prefix: "/restaurants/:restaurantId" },
       );

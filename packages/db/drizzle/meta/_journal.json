@@ -36,6 +36,13 @@
       "when": 1792791970899,
       "tag": "0004_guests_backfill",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792797644256,
+      "tag": "0005_booking_page",
+      "breakpoints": true
     }
   ]
 }

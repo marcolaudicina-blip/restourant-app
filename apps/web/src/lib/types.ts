@@ -133,3 +133,60 @@ export type Template = {
   description: string;
   summary: { rooms: number; tables: number; covers: number; services: string[] };
 };
+
+// Public booking page --------------------------------------------------------------------------
+
+export type BookingPageSettings = {
+  slug: string;
+  brandColor: string;
+  description: string | null;
+  logoId: string | null;
+  coverId: string | null;
+  photoIds: string[];
+};
+
+export type PublicProfile = {
+  slug: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  addressLine: string | null;
+  city: string | null;
+  postalCode: string | null;
+  timezone: string;
+  page: Omit<BookingPageSettings, "slug">;
+  booking: {
+    enabled: boolean;
+    minParty: number;
+    maxParty: number;
+    largePartyMode: "request" | "phone_only";
+    requirePhone: boolean;
+    requireEmail: boolean;
+    policyText: string | null;
+    today: string;
+    lastDate: string;
+  };
+};
+
+export type PublicDay = { date: string; open: boolean };
+
+export type PublicAvailability = {
+  date: string;
+  partySize: number;
+  /** "request": large groups ask and the restaurant confirms. */
+  mode: "book" | "request" | "closed";
+  reason: string | null;
+  message: string | null;
+  services: { serviceId: string; name: string; times: string[] }[];
+};
+
+export type PublicBooking = {
+  id: string;
+  status: "confirmed" | "requested";
+  date: string;
+  time: string;
+  partySize: number;
+  durationMinutes: number;
+  guestName: string;
+};

@@ -35,7 +35,23 @@ async function book(
   await expect(dialog).toBeHidden();
 }
 
-test("from sign-up to a full service", async ({ page }, testInfo) => {
+/** "sabato 24 ottobre", as the booking page labels its days. */
+function longDate(date: string): string {
+  return new Intl.DateTimeFormat("it-IT", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "UTC",
+  }).format(new Date(`${date}T12:00:00Z`));
+}
+
+/** A 1×1 PNG, enough to exercise the logo upload. */
+const PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+  "base64",
+);
+
+test("from sign-up to a full service", async ({ page, browser }, testInfo) => {
   const date = nextSaturday();
   const shot = (name: string) =>
     page.screenshot({ path: testInfo.outputPath(`${name}.png`), fullPage: true });
@@ -149,6 +165,42 @@ test("from sign-up to a full service", async ({ page }, testInfo) => {
   // The note now shows on the booking of the day.
   await page.goto(`/prenotazioni?data=${date}`);
   await expect(page.getByRole("listitem").filter({ hasText: "Rossi" })).toContainText("Celiaco");
+
+  // Booking page: brand color, logo and a few words, then the link to share.
+  await page.goto("/configurazione/pagina");
+  await page.getByRole("button", { name: "Colore Bordeaux" }).click();
+  await page.getByLabel("Presentazione").fill("Cucina di casa e pesce del giorno.");
+  const chooser = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: /Carica logo/ }).click();
+  await (await chooser).setFiles({ name: "logo.png", mimeType: "image/png", buffer: PNG });
+  await expect(page.getByRole("img", { name: "Logo", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Salva", exact: true }).click();
+  await expect(page.getByText("Pagina di prenotazione salvata")).toBeVisible();
+  await shot("10-pagina-prenotazione");
+  const link = (await page.getByTestId("booking-link").textContent())!;
+
+  // A guest, not signed in, books from the link.
+  const guestContext = await browser.newContext();
+  const guest = await guestContext.newPage();
+  await guest.goto(link);
+  await expect(guest.getByRole("heading", { name: "Trattoria E2E" })).toBeVisible();
+  await expect(guest.getByText("Cucina di casa e pesce del giorno.")).toBeVisible();
+  await guest.getByRole("button", { name: longDate(date), exact: true }).click();
+  await guest.getByRole("button", { name: "21:30", exact: true }).click();
+  await guest.getByLabel("Nome e cognome").fill("Verdi");
+  await guest.getByLabel("Telefono").fill("349 555 1212");
+  await guest.getByLabel("Email").fill("verdi@example.com");
+  await guest.getByRole("checkbox").check();
+  await guest.getByRole("button", { name: "Conferma prenotazione" }).click();
+  await expect(guest.getByText("Prenotazione confermata")).toBeVisible();
+  await guest.screenshot({ path: testInfo.outputPath("11-prenotazione-online.png"), fullPage: true });
+  await guestContext.close();
+
+  // Staff see it, marked as online.
+  await page.goto(`/prenotazioni?data=${date}`);
+  const verdi = page.getByRole("listitem").filter({ hasText: "Verdi" });
+  await expect(verdi).toContainText("Online");
+  await expect(verdi).toContainText("21:30");
 });
 
 test("login, wrong password and logout", async ({ page }) => {

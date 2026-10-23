@@ -227,6 +227,12 @@ function BookingRules({ data }: { data: ConfigSnapshot }) {
           "Prenotazioni online",
           p.onlineEnabled ? "Attive" : <span className="text-red-600">Disattivate</span>,
         ],
+        [
+          "Pagina di prenotazione",
+          <Link key="page" href="/configurazione/pagina" className="text-brand-700 hover:underline">
+            Link, colori e foto
+          </Link>,
+        ],
         ["Persone per prenotazione online", `da ${p.minPartyOnline} a ${p.maxPartyOnline}`],
         [
           "Gruppi più numerosi",

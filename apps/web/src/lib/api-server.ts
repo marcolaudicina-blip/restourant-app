@@ -71,3 +71,20 @@ export async function callApi(args: {
     return UNREACHABLE;
   }
 }
+
+/** GET for binary responses (pictures), which the text-based `callApi` would corrupt. */
+export async function callApiBinary(
+  url: string,
+): Promise<{ status: number; contentType: string; cacheControl: string | null; body: Uint8Array }> {
+  if (API_URL) {
+    const response = await fetch(`${API_URL}${url}`, { cache: "no-store" });
+    return {
+      status: response.status,
+      contentType: response.headers.get("content-type") ?? "application/octet-stream",
+      cacheControl: response.headers.get("cache-control"),
+      body: new Uint8Array(await response.arrayBuffer()),
+    };
+  }
+  const { callEmbeddedApiBinary } = await import("@restourant/api/embedded");
+  return callEmbeddedApiBinary(url);
+}
