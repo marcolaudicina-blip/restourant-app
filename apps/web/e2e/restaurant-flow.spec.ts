@@ -18,7 +18,10 @@ async function register(page: Page, restaurantName: string) {
   await page.getByRole("button", { name: "Crea account" }).click();
 }
 
-async function book(page: Page, { party, time, name }: { party: number; time: string; name: string }) {
+async function book(
+  page: Page,
+  { party, time, name, phone }: { party: number; time: string; name: string; phone?: string },
+) {
   await page.getByRole("button", { name: "Nuova" }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Persone").fill(String(party));
@@ -27,6 +30,7 @@ async function book(page: Page, { party, time, name }: { party: number; time: st
     .first()
     .click();
   await dialog.getByLabel("Nome").fill(name);
+  if (phone) await dialog.getByLabel("Telefono").fill(phone);
   await dialog.getByRole("button", { name: "Prenota" }).click();
   await expect(dialog).toBeHidden();
 }
@@ -44,32 +48,39 @@ test("from sign-up to a full service", async ({ page }, testInfo) => {
   await page.getByRole("button", { name: /Trattoria/ }).click();
   await page.getByRole("button", { name: "Usa questo modello" }).click();
 
-  // Configuration: the template created the rooms; give T12 the highest priority.
+  // Configuration overview: every rule of the restaurant on one page.
   await expect(page.getByRole("heading", { name: "Configurazione" })).toBeVisible();
+  await expect(page.getByText("Orari prenotabili")).toBeVisible();
+  await expect(page.getByRole("cell", { name: "19:00–22:30" }).first()).toBeVisible();
+  await expect(page.getByText("Tutti gli altri casi")).toBeVisible();
+  await shot("02-panoramica");
+
+  // Tables: the template created the rooms; give T12 the highest priority.
+  await page.getByRole("link", { name: "Sale e tavoli" }).click();
   await expect(page.getByLabel("Nome sala").first()).toHaveValue("Sala");
   const t12 = page.getByRole("row").filter({ has: page.locator('input[value="T12"]') });
   await t12.getByLabel("Priorità").fill("50");
   await t12.getByLabel("Priorità").press("Enter");
-  await shot("02-sale-tavoli");
+  await shot("02b-sale-tavoli");
 
   // Bookings: priority wins for 4 people; 6 people get two adjacent tables joined.
   await page.goto(`/prenotazioni?data=${date}`);
-  await book(page, { party: 4, time: "20:00", name: "Rossi" });
+  await book(page, { party: 4, time: "20:00", name: "Rossi", phone: "333 123 4567" });
   await expect(page.getByRole("listitem").filter({ hasText: "Rossi" })).toContainText("Tavolo T12");
   await book(page, { party: 6, time: "20:00", name: "Bianchi" });
   await expect(page.getByRole("listitem").filter({ hasText: "Bianchi" })).toContainText("Tavolo T7+T8");
   await shot("03-prenotazioni");
 
-  // New-booking dialog shows which table each time would get.
+  // New-booking dialog shows which table each time would get, and recognizes returning guests.
   await page.getByRole("button", { name: "Nuova" }).click();
-  await expect(
-    page
-      .getByRole("dialog")
-      .getByRole("button", { name: /^20:00/ })
-      .first(),
-  ).toBeVisible();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("button", { name: /^20:00/ }).first()).toBeVisible();
+  await dialog.getByLabel("Telefono").fill("3331234");
+  await dialog.getByRole("option", { name: /Rossi/ }).click();
+  await expect(dialog.getByRole("link", { name: "Rossi" })).toBeVisible();
+  await expect(dialog.getByLabel("Telefono")).toHaveValue("333 123 4567");
   await shot("04-nuova-prenotazione");
-  await page.getByRole("dialog").getByRole("button", { name: "Annulla" }).click();
+  await dialog.getByRole("button", { name: "Annulla" }).click();
 
   // Floor: move Rossi to T9 by tapping the booking and then the table.
   await page.goto(`/sala?data=${date}`);
@@ -94,7 +105,7 @@ test("from sign-up to a full service", async ({ page }, testInfo) => {
   await rossi.getByRole("button", { name: "Fai sedere" }).click();
   await expect(rossi).toContainText("Seduta");
 
-  // Layout editor and services render.
+  // Floor zoom and layout editor.
   await page.goto("/sala");
   await page.getByRole("button", { name: "Ingrandisci" }).click();
   await expect(page.getByRole("button", { name: "125%" })).toBeVisible();
@@ -110,9 +121,28 @@ test("from sign-up to a full service", async ({ page }, testInfo) => {
   await shot("06-disposizione");
   await page.getByRole("button", { name: "Tavoli affiancati" }).click();
   await shot("07-tavoli-affiancati");
-  await page.goto("/configurazione/servizi");
+  await page.goto("/configurazione/orari");
   await expect(page.getByText("Cena", { exact: true }).first()).toBeVisible();
-  await shot("08-servizi");
+  await page.goto("/configurazione/durate");
+  await expect(page.getByText("Tutti gli altri casi")).toBeVisible();
+  await shot("08-durate");
+
+  // Guests: Rossi has a profile with the booking history; add a permanent note and a tag.
+  await page.getByRole("link", { name: "Clienti" }).first().click();
+  await page.getByRole("link", { name: "Rossi" }).click();
+  await expect(page.getByRole("heading", { name: "Rossi" })).toBeVisible();
+  await expect(page.getByText("Storico")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Tavolo T1/ })).toContainText("Seduta");
+  await page.getByLabel("Note permanenti").fill("Celiaco");
+  await page.getByRole("button", { name: "Salva note" }).click();
+  await expect(page.getByText("Note salvate")).toBeVisible();
+  await page.getByRole("button", { name: "+ VIP" }).click();
+  await expect(page.getByRole("button", { name: "Rimuovi VIP" })).toBeVisible();
+  await shot("09-scheda-cliente");
+
+  // The note now shows on the booking of the day.
+  await page.goto(`/prenotazioni?data=${date}`);
+  await expect(page.getByRole("listitem").filter({ hasText: "Rossi" })).toContainText("Celiaco");
 });
 
 test("login, wrong password and logout", async ({ page }) => {

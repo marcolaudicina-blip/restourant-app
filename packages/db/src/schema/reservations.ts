@@ -17,6 +17,7 @@ import {
 import { primaryId, timestamps } from "./columns.js";
 import { reservationChannelEnum, reservationStatusEnum } from "./enums.js";
 import { diningTables, rooms } from "./floor.js";
+import { guests } from "./guests.js";
 import { users } from "./identity.js";
 import { restaurants } from "./restaurants.js";
 import { services } from "./scheduling.js";
@@ -44,6 +45,8 @@ export const reservations = pgTable(
     partySize: integer().notNull(),
     status: reservationStatusEnum().notNull(),
     channel: reservationChannelEnum().notNull(),
+    /** The guest profile this booking belongs to, when it could be matched or created. */
+    guestId: uuid(),
     guestName: text().notNull(),
     guestPhone: text(),
     guestEmail: text(),
@@ -62,6 +65,8 @@ export const reservations = pgTable(
       columns: [t.serviceId, t.restaurantId],
       foreignColumns: [services.id, services.restaurantId],
     }),
+    foreignKey({ columns: [t.guestId, t.restaurantId], foreignColumns: [guests.id, guests.restaurantId] }),
+    index().on(t.guestId),
     index().on(t.restaurantId, t.date),
     index().on(t.restaurantId, t.startsAt),
     check("reservations_party_size", sql`${t.partySize} >= 1`),

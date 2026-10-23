@@ -22,6 +22,20 @@
       "when": 1792769169761,
       "tag": "0002_reservation_overlap",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792791969969,
+      "tag": "0003_guests",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792791970899,
+      "tag": "0004_guests_backfill",
+      "breakpoints": true
     }
   ]
 }

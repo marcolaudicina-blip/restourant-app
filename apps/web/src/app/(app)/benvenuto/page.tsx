@@ -70,7 +70,7 @@ export default function WelcomePage() {
         ))}
       </div>
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <Button variant="ghost" onClick={() => router.replace("/configurazione")}>
+        <Button variant="ghost" onClick={() => router.replace("/configurazione/tavoli")}>
           Configuro da zero
         </Button>
         <Button size="lg" disabled={!choice} loading={pending} onClick={apply}>

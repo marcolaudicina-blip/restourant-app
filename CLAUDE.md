@@ -62,6 +62,10 @@ pnpm db:migrate      # applies migrations to $DATABASE_URL
   (migration 0002, needs `btree_gist`); keep `starts_at`/`ends_at`/`blocking` there in sync with the
   reservation via `writeTables` / status updates.
 - Reservation routes use the `reservations.read` / `reservations.write` permissions (staff included).
+- **Guests** (modules/guests): every booking is matched to a guest profile by `normalizePhone()` (then
+  email) in `matchGuest`, inside the reservation transaction; profiles are created on first contact.
+  Stats (visits, no-shows…) are computed from reservations, never stored. Deleting a guest anonymizes
+  their reservations. Migration 0004 backfilled profiles with SQL mirroring `normalizePhone`.
 - Drizzle uses `casing: "snake_case"`: write camelCase in TypeScript, columns are snake_case.
 
 ## Web app

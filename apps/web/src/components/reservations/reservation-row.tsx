@@ -8,6 +8,7 @@ import { cn } from "@/lib/cn";
 import { STATUS_ACTION_LABELS, STATUS_LABELS, statusColor } from "@/lib/labels";
 import { useRestaurantMutation } from "@/lib/queries";
 import type { Reservation } from "@/lib/types";
+import { GuestTag } from "../guests/guest-lookup";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/card";
 import { useToast } from "../ui/toast";
@@ -28,7 +29,7 @@ export function useStatusMutation() {
         method: "POST",
         body: { status: vars.status },
       }),
-    ["reservations", "availability"],
+    ["reservations", "availability", "guests"],
   );
   return (id: string, status: ReservationStatus) =>
     mutation.mutate(
@@ -64,6 +65,9 @@ export function ReservationRow({ reservation: r, onEdit }: { reservation: Reserv
             {r.internalNote && (
               <NotebookPen className="h-4 w-4 shrink-0 text-muted" aria-label="Note interne" />
             )}
+            {r.guest?.tags.slice(0, 2).map((tag) => (
+              <GuestTag key={tag} tag={tag} />
+            ))}
           </span>
           <span className="flex flex-wrap items-center gap-x-3 text-sm text-muted">
             <span className="flex items-center gap-1">
@@ -72,6 +76,19 @@ export function ReservationRow({ reservation: r, onEdit }: { reservation: Reserv
             <span>
               {r.tables.length ? `Tavolo ${r.tables.map((t) => t.name).join("+")}` : "Senza tavolo"}
             </span>
+            {r.guest && r.guest.visits > 0 && (
+              <span title="Visite del cliente">
+                {r.guest.visits} {r.guest.visits === 1 ? "visita" : "visite"}
+              </span>
+            )}
+            {r.guest && r.guest.noShows > 0 && (
+              <span className="text-red-600">{r.guest.noShows} no-show</span>
+            )}
+            {r.guest?.profileNote && (
+              <span className="max-w-56 truncate text-amber-700" title={r.guest.profileNote}>
+                {r.guest.profileNote}
+              </span>
+            )}
             {r.guestPhone && (
               <span className="hidden items-center gap-1 sm:flex">
                 <Phone className="h-3.5 w-3.5" /> {r.guestPhone}

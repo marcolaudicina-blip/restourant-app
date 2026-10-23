@@ -1,4 +1,4 @@
-import { diningTables, reservations, reservationTables } from "@restourant/db";
+import { diningTables, guests, reservations, reservationTables } from "@restourant/db";
 import {
   canTransition,
   findFreeOption,
@@ -15,21 +15,33 @@ import {
   type ReservationUpdate,
   type SeatingOption,
 } from "@restourant/shared";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { recordAudit } from "../../lib/audit.js";
 import { inTransaction, type TenantContext } from "../../lib/context.js";
 import { AppError, conflict, invalid, notFound } from "../../lib/errors.js";
 import { definedOnly } from "../../lib/http.js";
+import { guestStats, matchGuest } from "../guests/guests.service.js";
 import type { Service } from "../services/services.service.js";
 import { SLOT_REASON_MESSAGES, seatingOptions } from "./availability.service.js";
 import { loadFloorContext, type FloorContext } from "./floor-context.js";
 
 type ReservationRow = typeof reservations.$inferSelect;
 
+/** What staff should know about the guest when looking at a booking. */
+export type GuestSummary = {
+  id: string;
+  fullName: string;
+  tags: string[];
+  profileNote: string | null;
+  visits: number;
+  noShows: number;
+};
+
 export type Reservation = Omit<ReservationRow, "restaurantId" | "startTime"> & {
   time: string;
   tables: { id: string; name: string }[];
   tableIds: string[];
+  guest: GuestSummary | null;
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -49,12 +61,41 @@ async function hydrate(ctx: TenantContext, rows: ReservationRow[]): Promise<Rese
       ),
     );
   const byReservation = Map.groupBy(held, (h) => h.reservationId);
+
+  const guestIds = [...new Set(rows.map((r) => r.guestId).filter((id): id is string => id !== null))];
+  const [guestRows, stats] = await Promise.all([
+    guestIds.length
+      ? ctx.db
+          .select({
+            id: guests.id,
+            fullName: guests.fullName,
+            tags: guests.tags,
+            profileNote: guests.profileNote,
+          })
+          .from(guests)
+          .where(inArray(guests.id, guestIds))
+      : Promise.resolve([]),
+    guestStats(ctx, guestIds),
+  ]);
+  const guestById = new Map(
+    guestRows.map((g): [string, GuestSummary] => [
+      g.id,
+      { ...g, visits: stats.get(g.id)?.visits ?? 0, noShows: stats.get(g.id)?.noShows ?? 0 },
+    ]),
+  );
+
   const collator = new Intl.Collator("it", { numeric: true });
   return rows.map(({ restaurantId: _restaurantId, startTime, ...row }) => {
     const tables = (byReservation.get(row.id) ?? [])
       .map(({ id, name }) => ({ id, name }))
       .sort((a, b) => collator.compare(a.name, b.name));
-    return { ...row, time: normalizeTime(startTime), tables, tableIds: tables.map((t) => t.id) };
+    return {
+      ...row,
+      time: normalizeTime(startTime),
+      tables,
+      tableIds: tables.map((t) => t.id),
+      guest: row.guestId ? (guestById.get(row.guestId) ?? null) : null,
+    };
   });
 }
 
@@ -73,6 +114,17 @@ export async function listReservations(
       ),
     )
     .orderBy(asc(reservations.startsAt), asc(reservations.createdAt));
+  return hydrate(ctx, rows);
+}
+
+/** A guest's bookings, newest first. */
+export async function listGuestReservations(ctx: TenantContext, guestId: string): Promise<Reservation[]> {
+  const rows = await ctx.db
+    .select()
+    .from(reservations)
+    .where(and(eq(reservations.restaurantId, ctx.restaurantId), eq(reservations.guestId, guestId)))
+    .orderBy(desc(reservations.startsAt))
+    .limit(500);
   return hydrate(ctx, rows);
 }
 
@@ -271,10 +323,17 @@ export async function createReservation(
   });
 
   const id = await inTransaction(ctx, async (tx) => {
+    const guestId = await matchGuest(tx, {
+      guestId: input.guestId,
+      name: input.guestName,
+      phone: input.guestPhone,
+      email: input.guestEmail,
+    });
     const [row] = await tx.db
       .insert(reservations)
       .values({
         restaurantId: ctx.restaurantId,
+        guestId,
         serviceId: service?.id ?? null,
         date: input.date,
         startTime: input.time,
@@ -366,9 +425,18 @@ export async function updateReservation(
 
   await inTransaction(ctx, async (tx) => {
     const { date: _date, time: _time, partySize: _partySize, durationMinutes: _duration, ...guest } = fields;
+    // A new phone or email can mean a different guest: match the profile again.
+    const contactChanged = fields.guestPhone !== undefined || fields.guestEmail !== undefined;
+    const guestId = contactChanged
+      ? await matchGuest(tx, {
+          name: fields.guestName ?? current.guestName,
+          phone: fields.guestPhone !== undefined ? fields.guestPhone : current.guestPhone,
+          email: fields.guestEmail !== undefined ? fields.guestEmail : current.guestEmail,
+        })
+      : undefined;
     const [row] = await tx.db
       .update(reservations)
-      .set({ ...guest, ...schedule })
+      .set({ ...guest, ...schedule, ...(guestId !== undefined ? { guestId } : {}) })
       .where(and(eq(reservations.id, id), eq(reservations.restaurantId, ctx.restaurantId)))
       .returning();
     if (tableIds) await writeTables(tx, row!, tableIds);

@@ -75,3 +75,21 @@ const collator = new Intl.Collator("it", { numeric: true, sensitivity: "base" })
 export function byName<T extends { name: string }>(a: T, b: T): number {
   return collator.compare(a.name, b.name);
 }
+
+/** "24 ott 2026" */
+export function formatDateShort(date: string): string {
+  return new Intl.DateTimeFormat("it-IT", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${date}T12:00:00Z`));
+}
+
+/** 105 → "1 h 45" */
+export function formatDuration(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m} min`;
+  return m === 0 ? `${h} h` : `${h} h ${String(m).padStart(2, "0")}`;
+}

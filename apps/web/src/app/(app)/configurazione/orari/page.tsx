@@ -3,7 +3,6 @@
 import { SLOT_INTERVALS } from "@restourant/shared";
 import { Clock, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
-import { InlineNumber } from "@/components/config/inline";
 import { useConfigSave } from "@/components/config/use-save";
 import { Button } from "@/components/ui/button";
 import { Badge, Card, CardHeader, EmptyState } from "@/components/ui/card";
@@ -16,45 +15,23 @@ import { useConfig } from "@/lib/queries";
 import { useRestaurant } from "@/lib/restaurant";
 import type { Service } from "@/lib/types";
 
-export default function ServicesPage() {
+export default function OpeningHoursPage() {
   const config = useConfig();
   const { can } = useRestaurant();
-  const { run, save } = useConfigSave();
+  const { run } = useConfigSave();
   const [editing, setEditing] = useState<Service | "new" | null>(null);
 
   if (config.isPending) return <PageLoader />;
   const services = config.data?.services ?? [];
-  const rules = [...(config.data?.durationRules ?? [])].sort((a, b) => a.minParty - b.minParty);
   const policy = config.data!.bookingPolicy;
   const editable = can("config.write");
-  const serviceName = new Map(services.map((s) => [s.id, s.name]));
-  const roomName = new Map((config.data?.rooms ?? []).map((r) => [r.id, r.name]));
-
-  async function addRule(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const data = new FormData(form);
-    await save(
-      "POST",
-      "/duration-rules",
-      {
-        minParty: Number(data.get("minParty")),
-        maxParty: Number(data.get("maxParty")),
-        durationMinutes: Number(data.get("durationMinutes")),
-        serviceId: data.get("serviceId") || null,
-      },
-      "Regola aggiunta",
-    )
-      .then(() => form.reset())
-      .catch(() => undefined);
-  }
 
   return (
     <div className="flex flex-col gap-5">
       <Card>
         <CardHeader
-          title="Servizi"
-          description="I periodi in cui si prenota, con giorni, orari di arrivo e limiti per la cucina."
+          title="Orari prenotabili"
+          description="Ogni servizio (pranzo, cena…) ha i suoi giorni, il primo e l'ultimo orario di arrivo e i limiti per la cucina. Per ferie e giorni speciali usa Chiusure."
           actions={
             editable && (
               <Button onClick={() => setEditing("new")}>
@@ -116,121 +93,6 @@ export default function ServicesPage() {
               </li>
             ))}
           </ul>
-        )}
-      </Card>
-
-      <Card>
-        <CardHeader
-          title="Durata del tavolo"
-          description={`Quanto resta occupato un tavolo in base al numero di persone. Se nessuna regola corrisponde: ${policy.defaultDurationMinutes} minuti.`}
-        />
-        <fieldset disabled={!editable}>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-xs uppercase tracking-wide text-muted">
-                <th className="px-5 py-2 font-medium">Persone</th>
-                <th className="px-2 py-2 font-medium">Minuti</th>
-                <th className="px-2 py-2 font-medium">Vale per</th>
-                <th className="w-12" />
-              </tr>
-            </thead>
-            <tbody>
-              {rules.map((rule) => (
-                <tr key={rule.id} className="border-t border-line">
-                  <td className="px-3 py-1">
-                    <span className="flex items-center gap-1">
-                      <InlineNumber
-                        value={rule.minParty}
-                        min={1}
-                        label="Da"
-                        onCommit={(v) => v && run("PATCH", `/duration-rules/${rule.id}`, { minParty: v })}
-                      />
-                      –
-                      <InlineNumber
-                        value={rule.maxParty}
-                        min={1}
-                        label="A"
-                        onCommit={(v) => v && run("PATCH", `/duration-rules/${rule.id}`, { maxParty: v })}
-                      />
-                    </span>
-                  </td>
-                  <td className="px-0 py-1">
-                    <InlineNumber
-                      value={rule.durationMinutes}
-                      min={15}
-                      max={600}
-                      label="Minuti"
-                      onCommit={(v) =>
-                        v && run("PATCH", `/duration-rules/${rule.id}`, { durationMinutes: v })
-                      }
-                    />
-                  </td>
-                  <td className="px-2 py-1 text-muted">
-                    {[
-                      rule.serviceId && serviceName.get(rule.serviceId),
-                      rule.roomId && roomName.get(rule.roomId),
-                    ]
-                      .filter(Boolean)
-                      .join(" · ") || "Tutti i servizi"}
-                  </td>
-                  <td className="pr-2 text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label="Elimina regola"
-                      onClick={() => run("DELETE", `/duration-rules/${rule.id}`)}
-                    >
-                      <Trash2 className="h-4 w-4 text-muted" />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </fieldset>
-        {editable && (
-          <form onSubmit={addRule} className="flex flex-wrap items-end gap-2 border-t border-line px-5 py-3">
-            <Input
-              name="minParty"
-              type="number"
-              min={1}
-              required
-              placeholder="Da"
-              className="w-20"
-              aria-label="Da persone"
-            />
-            <Input
-              name="maxParty"
-              type="number"
-              min={1}
-              required
-              placeholder="A"
-              className="w-20"
-              aria-label="A persone"
-            />
-            <Input
-              name="durationMinutes"
-              type="number"
-              min={15}
-              max={600}
-              step={5}
-              required
-              placeholder="Minuti"
-              className="w-24"
-              aria-label="Minuti"
-            />
-            <Select name="serviceId" className="w-44" aria-label="Servizio">
-              <option value="">Tutti i servizi</option>
-              {services.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </Select>
-            <Button type="submit" variant="secondary">
-              <Plus className="h-4 w-4" /> Regola
-            </Button>
-          </form>
         )}
       </Card>
 

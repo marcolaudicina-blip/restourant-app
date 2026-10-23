@@ -8,12 +8,14 @@ import { cn } from "@/lib/cn";
 import { useRestaurant } from "@/lib/restaurant";
 
 const SECTIONS = [
-  { href: "/configurazione", label: "Sale e tavoli" },
+  { href: "/configurazione", label: "Panoramica" },
+  { href: "/configurazione/orari", label: "Orari e servizi" },
+  { href: "/configurazione/durate", label: "Durata dei tavoli" },
+  { href: "/configurazione/regole", label: "Regole di prenotazione" },
+  { href: "/configurazione/tavoli", label: "Sale e tavoli" },
   { href: "/configurazione/combinazioni", label: "Combinazioni" },
-  { href: "/configurazione/servizi", label: "Servizi e durate" },
-  { href: "/configurazione/regole", label: "Prenotazioni online" },
   { href: "/configurazione/chiusure", label: "Chiusure" },
-  { href: "/configurazione/locale", label: "Locale" },
+  { href: "/configurazione/locale", label: "Dati del locale" },
 ];
 
 export default function ConfigLayout({ children }: { children: ReactNode }) {

@@ -92,7 +92,7 @@ export function SalaView() {
         method: "PUT",
         body: { tableIds: vars.tableIds, ignoreCapacity: vars.ignoreCapacity },
       }),
-    ["reservations", "availability"],
+    ["reservations", "availability", "guests"],
   );
   const saveTable = useRestaurantMutation((base, vars: { id: string; posX: number; posY: number }) =>
     api(`${base}/tables/${vars.id}`, { method: "PATCH", body: { posX: vars.posX, posY: vars.posY } }),

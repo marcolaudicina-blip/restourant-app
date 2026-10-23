@@ -8,6 +8,11 @@ export const PERMISSIONS = {
   /** See and manage reservations: everyone working the floor. */
   "reservations.read": ["owner", "manager", "staff"],
   "reservations.write": ["owner", "manager", "staff"],
+  /** Guest profiles and their history: everyone taking bookings needs them. */
+  "guests.read": ["owner", "manager", "staff"],
+  "guests.write": ["owner", "manager", "staff"],
+  /** Erasing a guest (GDPR right to be forgotten). */
+  "guests.delete": ["owner", "manager"],
   /** History of who changed what. */
   "audit.read": ["owner", "manager"],
   /** Restaurant profile, billing-relevant data. */

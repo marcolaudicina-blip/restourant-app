@@ -1,315 +1,297 @@
 "use client";
 
-import { gridPosition } from "@restourant/shared";
-import { Info, Plus, Trash2 } from "lucide-react";
-import { useState, type FormEvent } from "react";
-import { InlineCheck, InlineNumber, InlineText } from "@/components/config/inline";
-import { useConfigSave } from "@/components/config/use-save";
-import { Button } from "@/components/ui/button";
-import { Card, EmptyState } from "@/components/ui/card";
-import { Input, Switch } from "@/components/ui/field";
+import { ArrowRight, CalendarOff, Clock, Globe, LayoutGrid, Timer } from "lucide-react";
+import Link from "next/link";
+import type { ReactNode } from "react";
+import { Card } from "@/components/ui/card";
 import { PageLoader } from "@/components/ui/spinner";
-import { byName } from "@/lib/labels";
+import { cn } from "@/lib/cn";
+import { formatDateShort, formatDuration, WEEKDAYS } from "@/lib/labels";
 import { useConfig } from "@/lib/queries";
 import { useRestaurant } from "@/lib/restaurant";
-import type { Room, Table } from "@/lib/types";
+import type { ConfigSnapshot, Service } from "@/lib/types";
 
-export default function RoomsAndTablesPage() {
+/** Every rule of the restaurant on one page, each linking to the screen that edits it. */
+export default function ConfigOverviewPage() {
   const config = useConfig();
-  const { can } = useRestaurant();
-  const { save, run } = useConfigSave();
-  const [newRoom, setNewRoom] = useState("");
-
-  if (config.isPending) return <PageLoader />;
-  const rooms = config.data?.rooms ?? [];
-  const tables = config.data?.tables ?? [];
-  const editable = can("config.write");
-
-  async function addRoom(event: FormEvent) {
-    event.preventDefault();
-    if (!newRoom.trim()) return;
-    await save(
-      "POST",
-      "/rooms",
-      { name: newRoom.trim(), sortOrder: rooms.length },
-      `Sala "${newRoom.trim()}" creata`,
-    ).catch(() => undefined);
-    setNewRoom("");
-  }
+  if (config.isPending || !config.data) return <PageLoader />;
+  const data = config.data;
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex items-start gap-3 rounded-xl bg-brand-50 px-4 py-3 text-sm text-brand-900">
-        <Info className="mt-0.5 h-4 w-4 shrink-0" />
-        <p>
-          La <strong>priorità</strong> decide quali tavoli il sistema propone per primi: più è alta, prima
-          viene scelto. I tavoli <strong>solo unito</strong> non vengono mai dati da soli. Per unire tavoli
-          vicini usa <em>Sala → Modifica disposizione → Tavoli affiancati</em>, oppure crea una combinazione.
-        </p>
-      </div>
-
-      {rooms.length === 0 && (
-        <Card>
-          <EmptyState title="Nessuna sala">Crea la prima sala, poi aggiungi i tavoli.</EmptyState>
-        </Card>
-      )}
-
-      {rooms.map((room) => (
-        <RoomCard
-          key={room.id}
-          room={room}
-          tables={tables.filter((t) => t.roomId === room.id).sort(byName)}
-          editable={editable}
-          run={run}
-          save={save}
+    <div className="grid gap-5 lg:grid-cols-2">
+      <Section
+        title="Orari prenotabili"
+        icon={<Clock className="h-5 w-5" />}
+        href="/configurazione/orari"
+        className="lg:col-span-2"
+      >
+        <WeeklyHours
+          services={data.services.filter((s) => s.isActive)}
+          defaultInterval={data.bookingPolicy.slotIntervalMinutes}
         />
-      ))}
+      </Section>
 
-      {editable && (
-        <form onSubmit={addRoom} className="flex gap-2">
-          <Input
-            value={newRoom}
-            onChange={(e) => setNewRoom(e.target.value)}
-            placeholder="Nuova sala, es. Terrazza"
-            className="max-w-xs"
-          />
-          <Button type="submit" variant="secondary">
-            <Plus className="h-4 w-4" /> Aggiungi sala
-          </Button>
-        </form>
-      )}
+      <Section title="Durata del tavolo" icon={<Timer className="h-5 w-5" />} href="/configurazione/durate">
+        <Durations data={data} />
+      </Section>
+
+      <Section
+        title="Regole di prenotazione"
+        icon={<Globe className="h-5 w-5" />}
+        href="/configurazione/regole"
+      >
+        <BookingRules data={data} />
+      </Section>
+
+      <Section title="Sale e tavoli" icon={<LayoutGrid className="h-5 w-5" />} href="/configurazione/tavoli">
+        <Rooms data={data} />
+      </Section>
+
+      <Section
+        title="Prossime chiusure"
+        icon={<CalendarOff className="h-5 w-5" />}
+        href="/configurazione/chiusure"
+      >
+        <Closures data={data} />
+      </Section>
     </div>
   );
 }
 
-type Save = ReturnType<typeof useConfigSave>;
-
-function RoomCard({
-  room,
-  tables,
-  editable,
-  run,
-  save,
+function Section({
+  title,
+  icon,
+  href,
+  children,
+  className,
 }: {
-  room: Room;
-  tables: Table[];
-  editable: boolean;
-  run: Save["run"];
-  save: Save["save"];
+  title: string;
+  icon: ReactNode;
+  href: string;
+  children: ReactNode;
+  className?: string;
 }) {
-  const patchRoom = (body: Partial<Room>) => run("PATCH", `/rooms/${room.id}`, body);
-  const patchTable = (table: Table, body: Partial<Table>) => run("PATCH", `/tables/${table.id}`, body);
-  const covers = tables.filter((t) => t.isActive).reduce((sum, t) => sum + t.maxCovers, 0);
-
-  async function addTable(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const data = new FormData(form);
-    await save(
-      "POST",
-      "/tables",
-      {
-        roomId: room.id,
-        name: String(data.get("name")),
-        minCovers: Number(data.get("minCovers")),
-        maxCovers: Number(data.get("maxCovers")),
-        priority: Number(data.get("priority") || 0),
-        ...gridPosition(tables.length),
-      },
-      "Tavolo aggiunto",
-    )
-      .then(() => form.reset())
-      .catch(() => undefined);
-  }
-
   return (
-    <Card>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
-        <div className="flex min-w-48 flex-1 items-center gap-2">
-          {editable ? (
-            <InlineText
-              value={room.name}
-              onCommit={(name) => patchRoom({ name })}
-              label="Nome sala"
-              className="text-base font-semibold"
-            />
-          ) : (
-            <h2 className="font-semibold">{room.name}</h2>
-          )}
-          <span className="whitespace-nowrap text-sm text-muted">
-            {tables.length} tavoli · {covers} posti
-          </span>
-        </div>
-        <div className="flex flex-wrap items-center gap-4">
-          <Switch
-            label="Attiva"
-            checked={room.isActive}
-            disabled={!editable}
-            onChange={(isActive) => patchRoom({ isActive })}
-          />
-          <Switch
-            label="Online"
-            checked={room.onlineBookable}
-            disabled={!editable}
-            onChange={(onlineBookable) => patchRoom({ onlineBookable })}
-          />
-          <Switch
-            label="Scelta dal cliente"
-            checked={room.guestSelectable}
-            disabled={!editable}
-            onChange={(guestSelectable) => patchRoom({ guestSelectable })}
-          />
-          {editable && (
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Elimina sala"
-              onClick={() => {
-                if (confirm(`Eliminare la sala "${room.name}" e tutti i suoi tavoli?`))
-                  run("DELETE", `/rooms/${room.id}`, undefined, "Sala eliminata");
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
+    <Card className={cn("flex flex-col", className)}>
+      <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-3.5">
+        <h2 className="flex items-center gap-2 font-semibold">
+          <span className="text-brand-600">{icon}</span>
+          {title}
+        </h2>
+        <Link
+          href={href}
+          className="flex items-center gap-1 text-sm font-medium text-brand-700 hover:underline"
+        >
+          Modifica <ArrowRight className="h-4 w-4" />
+        </Link>
       </div>
+      <div className="flex-1 px-5 py-4">{children}</div>
+    </Card>
+  );
+}
 
-      <fieldset disabled={!editable} className="overflow-x-auto">
-        <table className="w-full min-w-[640px] text-sm">
+function Rows({ rows }: { rows: [string, ReactNode][] }) {
+  return (
+    <dl className="divide-y divide-line text-sm">
+      {rows.map(([label, value]) => (
+        <div key={label} className="flex items-baseline justify-between gap-4 py-2 first:pt-0 last:pb-0">
+          <dt className="text-muted">{label}</dt>
+          <dd className="text-right font-medium">{value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function serviceHours(service: Service): string {
+  return service.seatingMode === "fixed"
+    ? `turni ${service.fixedSeatings.join(" · ")}`
+    : `${service.firstArrival}–${service.lastArrival}`;
+}
+
+function WeeklyHours({ services, defaultInterval }: { services: Service[]; defaultInterval: number }) {
+  const { today } = useRestaurant();
+  if (services.length === 0) {
+    return (
+      <p className="text-sm text-muted">
+        Nessun servizio: crea almeno un servizio per ricevere prenotazioni.
+      </p>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[480px] text-sm">
           <thead>
             <tr className="text-left text-xs uppercase tracking-wide text-muted">
-              <th className="px-4 py-2 font-medium">Tavolo</th>
-              <th className="px-2 py-2 font-medium">Min</th>
-              <th className="px-2 py-2 font-medium">Max</th>
-              <th className="px-2 py-2 font-medium">Priorità</th>
-              <th className="px-2 py-2 text-center font-medium">Online</th>
-              <th className="px-2 py-2 text-center font-medium">Solo unito</th>
-              <th className="px-2 py-2 text-center font-medium">Attivo</th>
-              <th className="w-12" />
+              <th className="py-1.5 pr-4 font-medium">Giorno</th>
+              {services.map((s) => (
+                <th key={s.id} className="py-1.5 pr-4 font-medium">
+                  {s.name}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {tables.map((table) => (
-              <tr key={table.id} className="border-t border-line">
-                <td className="px-2 py-1">
-                  <InlineText
-                    value={table.name}
-                    onCommit={(name) => patchTable(table, { name })}
-                    label="Nome tavolo"
-                    className="font-medium"
-                  />
-                </td>
-                <td className="px-0 py-1">
-                  <InlineNumber
-                    value={table.minCovers}
-                    min={1}
-                    max={100}
-                    label="Coperti minimi"
-                    onCommit={(v) => v && patchTable(table, { minCovers: v })}
-                  />
-                </td>
-                <td className="px-0 py-1">
-                  <InlineNumber
-                    value={table.maxCovers}
-                    min={1}
-                    max={100}
-                    label="Coperti massimi"
-                    onCommit={(v) => v && patchTable(table, { maxCovers: v })}
-                  />
-                </td>
-                <td className="px-0 py-1">
-                  <InlineNumber
-                    value={table.priority}
-                    min={0}
-                    max={100}
-                    label="Priorità"
-                    onCommit={(v) => patchTable(table, { priority: v ?? 0 })}
-                  />
-                </td>
-                <td className="text-center">
-                  <InlineCheck
-                    label="Prenotabile online"
-                    checked={table.onlineBookable}
-                    onChange={(onlineBookable) => patchTable(table, { onlineBookable })}
-                  />
-                </td>
-                <td className="text-center">
-                  <InlineCheck
-                    label="Solo unito"
-                    checked={table.combinationOnly}
-                    onChange={(combinationOnly) => patchTable(table, { combinationOnly })}
-                  />
-                </td>
-                <td className="text-center">
-                  <InlineCheck
-                    label="Attivo"
-                    checked={table.isActive}
-                    onChange={(isActive) => patchTable(table, { isActive })}
-                  />
-                </td>
-                <td className="pr-2 text-right">
-                  {editable && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label={`Elimina tavolo ${table.name}`}
-                      onClick={() =>
-                        confirm(`Eliminare il tavolo ${table.name}?`) &&
-                        run("DELETE", `/tables/${table.id}`, undefined, "Tavolo eliminato")
-                      }
-                    >
-                      <Trash2 className="h-4 w-4 text-muted" />
-                    </Button>
+            {WEEKDAYS.map((day) => {
+              const open = services.filter((s) => s.daysOfWeek.includes(day.value));
+              return (
+                <tr key={day.value} className="border-t border-line">
+                  <td className="py-2 pr-4 font-medium">{day.long}</td>
+                  {open.length === 0 ? (
+                    <td colSpan={services.length} className="py-2 text-muted">
+                      Chiuso
+                    </td>
+                  ) : (
+                    services.map((s) => (
+                      <td
+                        key={s.id}
+                        className={cn("py-2 pr-4 tabular-nums", !open.includes(s) && "text-muted")}
+                      >
+                        {open.includes(s) ? serviceHours(s) : "—"}
+                      </td>
+                    ))
                   )}
-                </td>
-              </tr>
-            ))}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
-      </fieldset>
+      </div>
+      <ul className="flex flex-col gap-1 text-xs text-muted">
+        {services.map((s) => {
+          const notes = [
+            s.seatingMode === "continuous"
+              ? `arrivi ogni ${s.slotIntervalMinutes ?? defaultInterval} min`
+              : null,
+            s.maxCoversPerSlot ? `max ${s.maxCoversPerSlot} coperti per fascia` : null,
+            s.maxBookingsPerSlot ? `max ${s.maxBookingsPerSlot} prenotazioni per fascia` : null,
+            s.maxCovers ? `max ${s.maxCovers} coperti in tutto` : null,
+            s.onlineBookable ? null : "solo tramite staff",
+            s.validFrom || s.validTo
+              ? `valido ${s.validFrom ? `dal ${formatDateShort(s.validFrom)}` : ""} ${s.validTo ? `al ${formatDateShort(s.validTo)}` : ""}`.trim()
+              : null,
+            s.validTo && s.validTo < today() ? "scaduto" : null,
+          ].filter(Boolean);
+          return (
+            <li key={s.id}>
+              <span className="font-medium text-ink">{s.name}</span>: {notes.join(", ")}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
 
-      {editable && (
-        <form onSubmit={addTable} className="flex flex-wrap items-end gap-2 border-t border-line px-4 py-3">
-          <Input
-            name="name"
-            required
-            placeholder="Nome, es. 12"
-            className="w-32"
-            aria-label="Nome nuovo tavolo"
-          />
-          <Input
-            name="minCovers"
-            type="number"
-            min={1}
-            required
-            defaultValue={2}
-            className="w-20"
-            aria-label="Coperti minimi"
-          />
-          <Input
-            name="maxCovers"
-            type="number"
-            min={1}
-            required
-            defaultValue={4}
-            className="w-20"
-            aria-label="Coperti massimi"
-          />
-          <Input
-            name="priority"
-            type="number"
-            min={0}
-            max={100}
-            defaultValue={0}
-            className="w-24"
-            aria-label="Priorità"
-          />
-          <Button type="submit" variant="secondary">
-            <Plus className="h-4 w-4" /> Tavolo
-          </Button>
-        </form>
-      )}
-    </Card>
+function Durations({ data }: { data: ConfigSnapshot }) {
+  const serviceName = new Map(data.services.map((s) => [s.id, s.name]));
+  const roomName = new Map(data.rooms.map((r) => [r.id, r.name]));
+  const rules = [...data.durationRules].sort((a, b) => a.minParty - b.minParty);
+  const persons = (min: number, max: number) =>
+    min === max
+      ? `${min} ${min === 1 ? "persona" : "persone"}`
+      : max >= 100
+        ? `${min}+ persone`
+        : `${min}–${max} persone`;
+  return (
+    <Rows
+      rows={[
+        ...rules.map((r): [string, ReactNode] => [
+          [
+            persons(r.minParty, r.maxParty),
+            r.serviceId && serviceName.get(r.serviceId),
+            r.roomId && roomName.get(r.roomId),
+          ]
+            .filter(Boolean)
+            .join(" · "),
+          formatDuration(r.durationMinutes),
+        ]),
+        ["Tutti gli altri casi", formatDuration(data.bookingPolicy.defaultDurationMinutes)],
+      ]}
+    />
+  );
+}
+
+function BookingRules({ data }: { data: ConfigSnapshot }) {
+  const p = data.bookingPolicy;
+  const confirmation = {
+    auto: "Automatica",
+    manual: "Manuale (la approvi tu)",
+    auto_up_to: `Automatica fino a ${p.autoConfirmMaxParty} persone`,
+  }[p.confirmationMode];
+  return (
+    <Rows
+      rows={[
+        [
+          "Prenotazioni online",
+          p.onlineEnabled ? "Attive" : <span className="text-red-600">Disattivate</span>,
+        ],
+        ["Persone per prenotazione online", `da ${p.minPartyOnline} a ${p.maxPartyOnline}`],
+        [
+          "Gruppi più numerosi",
+          p.largePartyMode === "request" ? "Inviano una richiesta" : "Devono telefonare",
+        ],
+        ["Preavviso minimo", p.minNoticeMinutes === 0 ? "Nessuno" : formatDuration(p.minNoticeMinutes)],
+        ["Prenotabile fino a", `${p.maxAdvanceDays} giorni prima`],
+        ["Conferma", confirmation],
+        [
+          "Cancellazione dal cliente",
+          p.guestCanCancel ? `fino a ${p.cancellationNoticeHours} h prima` : "Non consentita",
+        ],
+        [
+          "Contatti obbligatori",
+          [p.requirePhone && "telefono", p.requireEmail && "email"].filter(Boolean).join(" e "),
+        ],
+      ]}
+    />
+  );
+}
+
+function Rooms({ data }: { data: ConfigSnapshot }) {
+  const activeTables = data.tables.filter((t) => t.isActive);
+  return (
+    <Rows
+      rows={[
+        ...data.rooms.map((room): [string, ReactNode] => {
+          const tables = activeTables.filter((t) => t.roomId === room.id);
+          const seats = tables.reduce((n, t) => n + t.maxCovers, 0);
+          return [
+            room.name + (room.isActive ? "" : " (disattivata)"),
+            `${tables.length} tavoli · ${seats} posti${room.onlineBookable ? "" : " · solo staff"}`,
+          ];
+        }),
+        ["Combinazioni di tavoli", String(data.combinations.filter((c) => c.isActive).length)],
+        ["Coppie di tavoli affiancati", String(data.tableAdjacencies.length)],
+      ]}
+    />
+  );
+}
+
+function Closures({ data }: { data: ConfigSnapshot }) {
+  const { today } = useRestaurant();
+  const serviceName = new Map(data.services.map((s) => [s.id, s.name]));
+  const upcoming = data.calendarExceptions.filter((e) => e.dateTo >= today()).slice(0, 4);
+  if (upcoming.length === 0)
+    return <p className="text-sm text-muted">Nessuna chiusura o orario speciale in programma.</p>;
+  return (
+    <Rows
+      rows={upcoming.map((e): [string, ReactNode] => [
+        e.dateFrom === e.dateTo
+          ? formatDateShort(e.dateFrom)
+          : `${formatDateShort(e.dateFrom)} → ${formatDateShort(e.dateTo)}`,
+        [
+          e.kind === "special_hours"
+            ? `Orario speciale ${e.firstArrival}–${e.lastArrival}`
+            : e.scope === "online"
+              ? "Chiuso online"
+              : "Chiuso",
+          e.serviceId ? serviceName.get(e.serviceId) : null,
+          e.note,
+        ]
+          .filter(Boolean)
+          .join(" · "),
+      ])}
+    />
   );
 }

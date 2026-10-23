@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { CalendarDays, LayoutGrid, LogOut, Settings, UtensilsCrossed } from "lucide-react";
+import { CalendarDays, Contact, LayoutGrid, LogOut, Settings, UtensilsCrossed } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
@@ -18,6 +18,7 @@ import { PageLoader } from "./ui/spinner";
 const NAV = [
   { href: "/prenotazioni", label: "Prenotazioni", icon: CalendarDays },
   { href: "/sala", label: "Sala", icon: LayoutGrid },
+  { href: "/clienti", label: "Clienti", icon: Contact },
   { href: "/configurazione", label: "Configurazione", icon: Settings },
 ];
 

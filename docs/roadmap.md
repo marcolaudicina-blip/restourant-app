@@ -17,8 +17,9 @@ storico modifiche.
    sale × orari, app per telefono
 4. ⏳ **Pagina di prenotazione pubblica** e widget per il sito
 5. ⏳ **Email** di conferma, promemoria, modifica e cancellazione
-6. ⏳ **Scheda ospite** (note del profilo, storico visite, riconoscimento dal numero) e importazione
-   clienti da Superb
+6. ✅ **Scheda cliente**: creata in automatico dalle prenotazioni e riconosciuta dal telefono, note
+   permanenti, etichette, visite / coperti / no-show / cancellazioni, storico, cancellazione con
+   anonimizzazione (GDPR). Da fare: importazione clienti da Superb
 7. ⏳ Configurazione del nostro ristorante e 1–2 settimane in parallelo a Superb
 
 ## Fase 2: renderlo vendibile

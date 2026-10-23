@@ -10,6 +10,7 @@ import { CLOSED_REASON_LABELS, SLOT_REASON_LABELS } from "@/lib/labels";
 import { useAvailability, useConfig, useRestaurantMutation } from "@/lib/queries";
 import { useRestaurant } from "@/lib/restaurant";
 import type { Reservation } from "@/lib/types";
+import { GuestLookup, type GuestContact, type LinkedGuest } from "../guests/guest-lookup";
 import { Button } from "../ui/button";
 import { Dialog } from "../ui/dialog";
 import { Field, Input, Textarea } from "../ui/field";
@@ -48,11 +49,14 @@ export function ReservationDialog({
   onClose,
   mode,
   date: initialDate,
+  guest: initialGuest,
 }: {
   open: boolean;
   onClose: () => void;
   mode: Mode;
   date: string;
+  /** Pre-select a guest, e.g. "new booking" from a guest profile. */
+  guest?: { linked: LinkedGuest; phone: string | null; email: string | null };
 }) {
   const editing = mode.kind === "edit" ? mode.reservation : null;
   const walkIn = mode.kind === "create" && mode.walkIn === true;
@@ -66,6 +70,14 @@ export function ReservationDialog({
   const [manualTables, setManualTables] = useState<string[] | null>(editing ? editing.tableIds : null);
   const [warning, setWarning] = useState<{ code: string; message: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [contact, setContact] = useState<GuestContact>({
+    name: editing?.guestName ?? initialGuest?.linked.fullName ?? (walkIn ? "Walk-in" : ""),
+    phone: editing?.guestPhone ?? initialGuest?.phone ?? "",
+    email: editing?.guestEmail ?? initialGuest?.email ?? "",
+  });
+  const [linkedGuest, setLinkedGuest] = useState<LinkedGuest | null>(
+    editing?.guest ?? initialGuest?.linked ?? null,
+  );
 
   const availability = useAvailability(date, partySize, "staff", open && !walkIn);
   const selectedSlot = availability.data?.services.flatMap((s) => s.slots).find((s) => s.time === time);
@@ -75,12 +87,12 @@ export function ReservationDialog({
       editing
         ? api<Reservation>(`${base}/reservations/${editing.id}`, { method: "PATCH", body })
         : api<Reservation>(`${base}/reservations`, { method: "POST", body }),
-    ["reservations", "availability"],
+    ["reservations", "availability", "guests"],
   );
   const saveTables = useRestaurantMutation(
     (base, body: { tableIds: string[]; ignoreCapacity?: boolean }) =>
       api<Reservation>(`${base}/reservations/${editing!.id}/tables`, { method: "PUT", body }),
-    ["reservations", "availability"],
+    ["reservations", "availability", "guests"],
   );
 
   const tablesByRoom = useMemo(() => {
@@ -104,9 +116,9 @@ export function ReservationDialog({
       return v === "" ? null : v;
     };
     const guest = {
-      guestName: text("guestName") ?? "",
-      guestPhone: text("guestPhone"),
-      guestEmail: text("guestEmail"),
+      guestName: contact.name.trim(),
+      guestPhone: contact.phone.trim() || null,
+      guestEmail: contact.email.trim() || null,
       guestNote: text("guestNote"),
       internalNote: text("internalNote"),
     };
@@ -129,6 +141,7 @@ export function ReservationDialog({
           ...guest,
           ...(manualTables?.length ? { tableIds: manualTables } : {}),
           ...(walkIn ? { channel: "walk_in" } : {}),
+          ...(linkedGuest ? { guestId: linkedGuest.id } : {}),
           ...overrides,
         });
         toast.success(walkIn ? "Walk-in registrato" : `Prenotazione inserita alle ${time}`);
@@ -353,39 +366,15 @@ export function ReservationDialog({
         </div>
 
         <div className="flex flex-col gap-4">
-          <Field label="Nome">
-            {(id) => (
-              <Input
-                id={id}
-                name="guestName"
-                required
-                defaultValue={editing?.guestName ?? (walkIn ? "Walk-in" : "")}
-                autoComplete="off"
-              />
-            )}
-          </Field>
-          <Field label="Telefono">
-            {(id) => (
-              <Input
-                id={id}
-                name="guestPhone"
-                type="tel"
-                defaultValue={editing?.guestPhone ?? ""}
-                autoComplete="off"
-              />
-            )}
-          </Field>
-          <Field label="Email">
-            {(id) => (
-              <Input
-                id={id}
-                name="guestEmail"
-                type="email"
-                defaultValue={editing?.guestEmail ?? ""}
-                autoComplete="off"
-              />
-            )}
-          </Field>
+          <GuestLookup
+            contact={contact}
+            onContactChange={(next) => {
+              setContact(next);
+              setWarning(null);
+            }}
+            linked={linkedGuest}
+            onLink={setLinkedGuest}
+          />
           <Field label="Note del cliente" hint="Allergie, occasione, richieste">
             {(id) => <Textarea id={id} name="guestNote" defaultValue={editing?.guestNote ?? ""} />}
           </Field>

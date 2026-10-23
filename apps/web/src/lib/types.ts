@@ -44,9 +44,46 @@ export type ConfigSnapshot = {
   calendarExceptions: CalendarException[];
 };
 
+export type GuestStats = {
+  visits: number;
+  covers: number;
+  noShows: number;
+  cancellations: number;
+  upcoming: number;
+  lastVisit: string | null;
+  nextBooking: string | null;
+};
+
+export type Guest = {
+  id: string;
+  fullName: string;
+  phone: string | null;
+  email: string | null;
+  profileNote: string | null;
+  tags: string[];
+  marketingConsent: boolean;
+  createdAt: string;
+  updatedAt: string;
+  stats: GuestStats;
+};
+
+export type GuestDetail = Guest & { reservations: Reservation[] };
+
+/** What the day views show about the guest of a booking. */
+export type GuestSummary = {
+  id: string;
+  fullName: string;
+  tags: string[];
+  profileNote: string | null;
+  visits: number;
+  noShows: number;
+};
+
 export type Reservation = {
   id: string;
   serviceId: string | null;
+  guestId: string | null;
+  guest: GuestSummary | null;
   date: string;
   time: string;
   startsAt: string;

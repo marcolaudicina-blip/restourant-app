@@ -79,6 +79,8 @@ export const reservationCreateInput = z.object({
   tableIds: uniqueIds.min(1).max(12).optional(),
   /** Overrides the duration rules. */
   durationMinutes: z.number().int().min(15).max(600).optional(),
+  /** Existing guest picked by staff; otherwise the guest is matched or created from the phone/email. */
+  guestId: id.optional(),
   /** Restrict automatic assignment to a room. */
   roomId: id.optional(),
   channel: z.enum(["staff", "walk_in"]).optional(),

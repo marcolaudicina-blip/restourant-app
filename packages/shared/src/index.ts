@@ -18,3 +18,5 @@ export * from "./time-zone.js";
 export * from "./seating.js";
 export * from "./availability.js";
 export * from "./schemas/reservation.js";
+export * from "./phone.js";
+export * from "./schemas/guest.js";
