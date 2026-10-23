@@ -88,6 +88,16 @@ Per il canale online valgono anche: prenotazione online disattivata, date passat
 gruppi oltre il limite online (`large_party_request` / `large_party_phone`), tavoli e sale non
 prenotabili online, blocchi solo online.
 
+## Provenienza
+
+Ogni prenotazione ha un canale: `staff` (inserita dal personale), `online` (fatta dal cliente sul
+sito) o `walk_in` (arrivato senza prenotazione). Lo staff può creare solo `staff` e `walk_in`; il
+canale `online` lo assegna la pagina di prenotazione pubblica.
+
+Nell'app le prenotazioni online hanno il segno viola **Online** (globo) nella lista, in sala sul tavolo
+e nella scheda cliente, e i walk-in il segno **Walk-in**. In lista c'è il conteggio delle online del
+giorno e il filtro "Solo online"; aprendo una prenotazione si vede da dove è arrivata e quando.
+
 ## Storico
 
 Tavoli, sale e servizi con prenotazioni collegate non si possono eliminare (`in_use`): si

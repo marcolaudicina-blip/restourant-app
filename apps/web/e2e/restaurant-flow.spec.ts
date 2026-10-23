@@ -71,6 +71,12 @@ test("from sign-up to a full service", async ({ page }, testInfo) => {
   await expect(page.getByRole("listitem").filter({ hasText: "Bianchi" })).toContainText("Tavolo T7+T8");
   await shot("03-prenotazioni");
 
+  // Staff bookings carry no channel mark; the "online only" filter is empty until guests book online.
+  await expect(page.getByRole("listitem").filter({ hasText: "Rossi" })).not.toContainText("Online");
+  await page.getByRole("button", { name: "Solo online" }).click();
+  await expect(page.getByText("Nessuna prenotazione online")).toBeVisible();
+  await page.getByRole("button", { name: "Solo online" }).click();
+
   // New-booking dialog shows which table each time would get, and recognizes returning guests.
   await page.getByRole("button", { name: "Nuova" }).click();
   const dialog = page.getByRole("dialog");

@@ -11,6 +11,7 @@ import type { Reservation } from "@/lib/types";
 import { GuestTag } from "../guests/guest-lookup";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/card";
+import { ChannelBadge } from "./channel-badge";
 import { useToast } from "../ui/toast";
 
 /** The one-tap action shown on each row; everything else is in the menu. */
@@ -59,6 +60,7 @@ export function ReservationRow({ reservation: r, onEdit }: { reservation: Reserv
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-2">
             <span className="truncate font-medium">{r.guestName}</span>
+            <ChannelBadge channel={r.channel} />
             {r.guestNote && (
               <MessageSquareText className="h-4 w-4 shrink-0 text-amber-600" aria-label="Note del cliente" />
             )}

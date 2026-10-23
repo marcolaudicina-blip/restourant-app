@@ -93,3 +93,14 @@ export function formatDuration(minutes: number): string {
   if (h === 0) return `${m} min`;
   return m === 0 ? `${h} h` : `${h} h ${String(m).padStart(2, "0")}`;
 }
+
+/** An instant in the restaurant's time zone: "23 ott, 14:32" */
+export function formatInstant(iso: string, timeZone: string): string {
+  return new Intl.DateTimeFormat("it-IT", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone,
+  }).format(new Date(iso));
+}

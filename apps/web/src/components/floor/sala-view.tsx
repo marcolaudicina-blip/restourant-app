@@ -7,8 +7,8 @@ import {
   timeToMinutes,
   wallMinutesFrom,
 } from "@restourant/shared";
-import { Combine, Link2, Move, PencilRuler, Plus, Users, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Combine, Globe, Link2, Move, PencilRuler, Plus, Users, X } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { api, ApiError, describeError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { byName, STATUS_ACTION_LABELS, STATUS_LABELS, statusColor } from "@/lib/labels";
@@ -18,6 +18,7 @@ import type { Reservation, Table } from "@/lib/types";
 import { useSelectedDate } from "@/lib/use-date";
 import { useConfigSave } from "../config/use-save";
 import { DateNav } from "../date-nav";
+import { ChannelBadge } from "../reservations/channel-badge";
 import { ReservationDialog } from "../reservations/reservation-dialog";
 import { useStatusMutation } from "../reservations/reservation-row";
 import { Button } from "../ui/button";
@@ -136,14 +137,19 @@ export function SalaView() {
     if (current) {
       return {
         color: statusColor(current.reservation.status),
-        caption: `${current.reservation.guestName} · ${current.reservation.partySize}`,
+        caption: withChannel(
+          current.reservation,
+          `${current.reservation.guestName} · ${current.reservation.partySize}`,
+        ),
         highlighted: isSelectedTable,
       };
     }
     return {
       color: null,
       outlined: upcoming ? "#F59E0B" : null,
-      caption: upcoming ? `${upcoming.reservation.time} ${upcoming.reservation.guestName}` : undefined,
+      caption: upcoming
+        ? withChannel(upcoming.reservation, `${upcoming.reservation.time} ${upcoming.reservation.guestName}`)
+        : undefined,
       highlighted: isSelectedTable,
     };
   };
@@ -392,7 +398,9 @@ export function SalaView() {
               <Card className="p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="font-semibold">{selected.guestName}</p>
+                    <p className="flex items-center gap-2 font-semibold">
+                      {selected.guestName} <ChannelBadge channel={selected.channel} />
+                    </p>
                     <p className="text-sm text-muted">
                       {selected.time} · {selected.partySize} persone · tavolo{" "}
                       {selected.tables.map((t) => t.name).join("+")}
@@ -467,7 +475,10 @@ export function SalaView() {
                     >
                       <span className="w-11 font-semibold tabular-nums">{r.time}</span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium">{r.guestName}</span>
+                        <span className="flex items-center gap-1.5">
+                          <span className="truncate text-sm font-medium">{r.guestName}</span>
+                          <ChannelBadge channel={r.channel} compact />
+                        </span>
                         <span className="flex items-center gap-1 text-xs text-muted">
                           <Users className="h-3 w-3" /> {r.partySize} ·{" "}
                           {r.tables.map((t) => t.name).join("+") || "—"}
@@ -491,6 +502,17 @@ export function SalaView() {
           date={date}
         />
       )}
+    </>
+  );
+}
+
+/** Table caption, with a globe in front for bookings made online. */
+function withChannel(reservation: Reservation, text: string): ReactNode {
+  if (reservation.channel !== "online") return text;
+  return (
+    <>
+      <Globe className="mr-0.5 inline h-[1em] w-[1em] align-[-0.125em] text-violet-600" aria-label="Online" />
+      {text}
     </>
   );
 }

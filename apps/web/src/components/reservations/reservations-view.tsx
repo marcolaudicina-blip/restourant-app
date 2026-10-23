@@ -1,7 +1,7 @@
 "use client";
 
 import { isBlockingStatus } from "@restourant/shared";
-import { CalendarPlus, DoorOpen, Search, Users } from "lucide-react";
+import { CalendarPlus, DoorOpen, Globe, Search, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/cn";
 import { useConfig, useReservations } from "@/lib/queries";
@@ -23,11 +23,13 @@ export function ReservationsView() {
   const config = useConfig();
   const [dialog, setDialog] = useState<DialogState>(null);
   const [showAll, setShowAll] = useState(false);
+  const [onlineOnly, setOnlineOnly] = useState(false);
   const [query, setQuery] = useState("");
 
   const all = useMemo(() => reservations.data ?? [], [reservations.data]);
   const active = all.filter((r) => isBlockingStatus(r.status) || r.status === "completed");
   const visible = (showAll ? all : active).filter((r) => {
+    if (onlineOnly && r.channel !== "online") return false;
     const q = query.trim().toLowerCase();
     return (
       !q ||
@@ -50,6 +52,7 @@ export function ReservationsView() {
   const covers = (list: Reservation[]) => list.reduce((sum, r) => sum + r.partySize, 0);
   const counted = all.filter((r) => isBlockingStatus(r.status) || r.status === "completed");
   const seatedNow = all.filter((r) => r.status === "seated");
+  const online = counted.filter((r) => r.channel === "online");
 
   return (
     <>
@@ -68,10 +71,11 @@ export function ReservationsView() {
         }
       />
 
-      <div className="mb-4 grid grid-cols-3 gap-3">
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Prenotazioni" value={counted.length} />
         <Stat label="Coperti" value={covers(counted)} />
         <Stat label="Seduti ora" value={covers(seatedNow)} />
+        <Stat label="Online" value={online.length} />
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -102,6 +106,18 @@ export function ReservationsView() {
             </button>
           ))}
         </div>
+        <button
+          onClick={() => setOnlineOnly(!onlineOnly)}
+          aria-pressed={onlineOnly}
+          className={cn(
+            "flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium",
+            onlineOnly
+              ? "border-violet-300 bg-violet-100 text-violet-700"
+              : "border-line bg-surface text-muted hover:text-ink",
+          )}
+        >
+          <Globe className="h-4 w-4" /> Solo online
+        </button>
       </div>
 
       {reservations.isPending ? (
@@ -110,9 +126,15 @@ export function ReservationsView() {
         <Card>
           <EmptyState
             icon={<CalendarPlus className="h-8 w-8" />}
-            title={query ? "Nessun risultato" : "Nessuna prenotazione"}
+            title={
+              query ? "Nessun risultato" : onlineOnly ? "Nessuna prenotazione online" : "Nessuna prenotazione"
+            }
           >
-            {query ? "Prova con un altro nome o numero." : "Inserisci la prima prenotazione della giornata."}
+            {query
+              ? "Prova con un altro nome o numero."
+              : onlineOnly
+                ? "Le prenotazioni fatte dai clienti sul sito compariranno qui."
+                : "Inserisci la prima prenotazione della giornata."}
           </EmptyState>
         </Card>
       ) : (

@@ -16,6 +16,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { GuestTag, toLinked } from "@/components/guests/guest-lookup";
+import { ChannelBadge } from "@/components/reservations/channel-badge";
 import { ReservationDialog } from "@/components/reservations/reservation-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge, Card, CardHeader, EmptyState } from "@/components/ui/card";
@@ -244,6 +245,7 @@ function History({
                 </span>
               )}
             </span>
+            <ChannelBadge channel={r.channel} />
             <Badge color={statusColor(r.status)}>{STATUS_LABELS[r.status]}</Badge>
           </button>
         </li>

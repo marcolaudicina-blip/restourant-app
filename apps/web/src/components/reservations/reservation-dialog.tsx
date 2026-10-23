@@ -5,7 +5,7 @@ import { Minus, Plus, Sparkles, TriangleAlert } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
 import { api, ApiError, describeError } from "@/lib/api";
 import { cn } from "@/lib/cn";
-import { byName } from "@/lib/labels";
+import { byName, formatInstant } from "@/lib/labels";
 import { CLOSED_REASON_LABELS, SLOT_REASON_LABELS } from "@/lib/labels";
 import { useAvailability, useConfig, useRestaurantMutation } from "@/lib/queries";
 import { useRestaurant } from "@/lib/restaurant";
@@ -15,6 +15,7 @@ import { Button } from "../ui/button";
 import { Dialog } from "../ui/dialog";
 import { Field, Input, Textarea } from "../ui/field";
 import { useToast } from "../ui/toast";
+import { ChannelBadge } from "./channel-badge";
 
 type Mode = { kind: "create"; walkIn?: boolean } | { kind: "edit"; reservation: Reservation };
 
@@ -165,7 +166,21 @@ export function ReservationDialog({
       onClose={onClose}
       size="lg"
       title={editing ? `Modifica: ${editing.guestName}` : walkIn ? "Walk-in" : "Nuova prenotazione"}
-      description={walkIn ? "Clienti arrivati senza prenotazione: vengono fatti sedere subito." : undefined}
+      description={
+        editing ? (
+          <span className="flex flex-wrap items-center gap-2">
+            <ChannelBadge channel={editing.channel} />
+            {editing.channel === "online"
+              ? "Prenotata dal cliente online"
+              : editing.channel === "walk_in"
+                ? "Registrata all'arrivo"
+                : "Inserita dallo staff"}{" "}
+            il {formatInstant(editing.createdAt, timezone)}
+          </span>
+        ) : walkIn ? (
+          "Clienti arrivati senza prenotazione: vengono fatti sedere subito."
+        ) : undefined
+      }
     >
       <form
         id="reservation-form"

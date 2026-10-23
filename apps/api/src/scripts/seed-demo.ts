@@ -3,17 +3,22 @@
  *
  *   DEMO_EMAIL=demo@example.com DEMO_PASSWORD=... DATABASE_URL=... pnpm --filter @restourant/api seed:demo
  *
- * Idempotent: if the demo account already exists nothing is changed. Everything goes through the
- * real API (in-process), so the data obeys the same rules as data entered from the app.
+ * Idempotent: if the demo account already exists only the missing upgrades are applied. Everything
+ * goes through the real API (in-process), so the data obeys the same rules as data entered from the
+ * app; the one exception is `markOnlineBookings`, see there.
  */
 import { randomBytes } from "node:crypto";
-import { createDatabase } from "@restourant/db";
+import { createDatabase, memberships, reservations, users } from "@restourant/db";
 import { addDays, instantToLocal } from "@restourant/shared";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { buildApp } from "../app.js";
 import { createPasswordHasher } from "../lib/passwords.js";
 import { createTokenService } from "../lib/tokens.js";
 
 const TIMEZONE = "Europe/Rome";
+
+/** Demo guests who "booked on the website". */
+const ONLINE_GUESTS = ["Ferrari", "Esposito", "Colombo", "Gallo", "De Luca"];
 
 const email = process.env.DEMO_EMAIL;
 const password = process.env.DEMO_PASSWORD;
@@ -53,10 +58,11 @@ async function call<T = unknown>(method: "GET" | "POST" | "PATCH" | "PUT", path:
 try {
   const login = await app.inject({ method: "POST", url: "/v1/auth/login", payload: { email, password } });
   if (login.statusCode === 200) {
-    console.log(`Demo account ${email} already exists: nothing to do`);
+    console.log(`Demo account ${email} already exists`);
   } else {
     await seed();
   }
+  await markOnlineBookings();
 } finally {
   await app.close();
   await database.close();
@@ -186,4 +192,31 @@ async function seed() {
   }
 
   console.log(`Demo restaurant created for ${email}: ${created} reservations on ${openDays.join(", ")}`);
+}
+
+/**
+ * Staff cannot create online bookings through the API (only the public booking page will), so the
+ * demo marks a few of its bookings as online directly, once, to show how they stand out in the app.
+ */
+async function markOnlineBookings() {
+  const db = database.db;
+  const [owner] = await db
+    .select({ restaurantId: memberships.restaurantId })
+    .from(memberships)
+    .innerJoin(users, eq(users.id, memberships.userId))
+    .where(eq(sql`lower(${users.email})`, email!.toLowerCase()));
+  if (!owner) return;
+  const scope = eq(reservations.restaurantId, owner.restaurantId);
+  const [existing] = await db
+    .select({ id: reservations.id })
+    .from(reservations)
+    .where(and(scope, eq(reservations.channel, "online")))
+    .limit(1);
+  if (existing) return;
+  const marked = await db
+    .update(reservations)
+    .set({ channel: "online" })
+    .where(and(scope, eq(reservations.channel, "staff"), inArray(reservations.guestName, ONLINE_GUESTS)))
+    .returning({ id: reservations.id });
+  console.log(`Demo: ${marked.length} bookings marked as online`);
 }
