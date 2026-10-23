@@ -5,6 +5,10 @@
 set -e
 if [ -n "${DATABASE_URL_UNPOOLED:-$DATABASE_URL}" ]; then
   DATABASE_URL="${DATABASE_URL_UNPOOLED:-$DATABASE_URL}" pnpm --filter @restourant/db migrate
+  # Optional demo restaurant, created once when DEMO_EMAIL and DEMO_PASSWORD are set.
+  if [ -n "$DEMO_EMAIL" ] && [ -n "$DEMO_PASSWORD" ]; then
+    DATABASE_URL="${DATABASE_URL_UNPOOLED:-$DATABASE_URL}" pnpm --filter @restourant/api seed:demo
+  fi
 else
   echo "DATABASE_URL non impostata: migrazioni saltate. Collega un database al progetto Vercel."
 fi
