@@ -8,3 +8,8 @@ coverage
 *.log
 .DS_Store
 .data
+.next
+next-env.d.ts
+*.tsbuildinfo
+test-results
+playwright-report

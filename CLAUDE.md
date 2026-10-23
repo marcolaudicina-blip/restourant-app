@@ -11,6 +11,7 @@ Product docs are in Italian (`docs/`), code and code comments in English.
 
 ```
 apps/api          Fastify REST API (TypeScript, ESM)
+apps/web          Next.js 15 staff app (App Router, Tailwind 4, TanStack Query), Italian UI
 packages/shared   Zod schemas + pure domain logic, shared by API and future web/mobile apps
 packages/db       Drizzle ORM schema, SQL migrations, Postgres/PGlite client
 docs/             Functional spec and architecture notes (Italian)
@@ -27,6 +28,10 @@ pnpm test            # all packages (PGlite in-memory Postgres, no server needed
 pnpm lint && pnpm typecheck && pnpm format:check
 pnpm build
 pnpm --filter @restourant/api dev       # API on :3001, needs apps/api/.env (see .env.example)
+pnpm --filter @restourant/web dev       # web on :3000, talks to API_URL (default http://localhost:3001)
+pnpm --filter @restourant/web build && pnpm --filter @restourant/web e2e   # Playwright, starts API + web itself
+# In this container Playwright's bundled Chromium revision is missing: set
+# PW_CHROMIUM_PATH=/opt/pw-browsers/chromium-1243/chrome-linux64/chrome
 pnpm db:generate     # after changing packages/db/src/schema → creates a new SQL migration
 pnpm db:migrate      # applies migrations to $DATABASE_URL
 ```
@@ -59,8 +64,22 @@ pnpm db:migrate      # applies migrations to $DATABASE_URL
 - Reservation routes use the `reservations.read` / `reservations.write` permissions (staff included).
 - Drizzle uses `casing: "snake_case"`: write camelCase in TypeScript, columns are snake_case.
 
+## Web app
+
+- The browser never sees the API token: `/api/session` (login/register/logout) stores it in the
+  httpOnly `rs_session` cookie, and `/api/v1/*` is a proxy that adds `Authorization`. Client code calls
+  `api()` from `src/lib/api.ts` with API paths (`/restaurants/...`).
+- `RestaurantProvider` (src/lib/restaurant.tsx) exposes the current restaurant, its time zone and
+  `can(permission)`. Queries live in `src/lib/queries.ts`; mutations go through `useRestaurantMutation`
+  (or `useConfigSave` on configuration screens), which invalidates the affected query families.
+- The selected day is in the URL (`?data=YYYY-MM-DD`, `useSelectedDate`). Reservations refetch every 20s
+  so devices in the room stay in sync (no websockets yet).
+- UI primitives are in `src/components/ui`; copy is Italian, labels for API codes in `src/lib/labels.ts`.
+
 ## Testing
 
 - Pure logic: unit tests in `packages/shared/test`.
 - API: `apps/api/test` builds the real app on an in-memory PGlite database via `createTestApp()`
   and drives it with `app.inject`. Prefer adding API tests for new endpoints.
+- Web: `apps/web/e2e` (Playwright, desktop + tablet viewports) runs the full flow against a real API on
+  PGlite. Screenshots of each step land in `apps/web/test-results/`.

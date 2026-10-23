@@ -22,6 +22,16 @@ come primo cliente.
 - Disponibilità per orario con il motivo di ogni slot chiuso, ritmo della cucina, walk-in, stati
 - Nessuna doppia prenotazione possibile, garantito dal database
 
+**Gestionale web** 🔄
+
+- Accesso e registrazione, configurazione guidata con modelli pronti
+- Prenotazioni del giorno per servizio, inserimento con orari disponibili e tavolo proposto,
+  walk-in, stati con un tocco, ricerca per nome o telefono
+- Sala: piantina con tavoli colorati per stato all'orario scelto; tocca una prenotazione e poi un
+  tavolo per spostarla, oppure "Unisci tavoli"; editor della disposizione e dei tavoli affiancati
+- Configurazione: sale e tavoli (priorità, min/max, online), combinazioni, servizi e durate, regole
+  online, chiusure, dati del locale
+
 Dettagli funzionali: [docs/configurazione.md](docs/configurazione.md) · Prenotazioni:
 [docs/prenotazioni.md](docs/prenotazioni.md) · Architettura:
 [docs/architettura.md](docs/architettura.md) · Piano: [docs/roadmap.md](docs/roadmap.md)
@@ -34,6 +44,7 @@ Serve Node 22 e pnpm 10 (`corepack enable`).
 pnpm install
 cp apps/api/.env.example apps/api/.env   # usa un database integrato, nessun Postgres da installare
 pnpm --filter @restourant/api dev        # API su http://localhost:3001
+pnpm --filter @restourant/web dev        # gestionale su http://localhost:3000
 pnpm test                                # tutti i test
 ```
 

@@ -11,8 +11,10 @@ storico modifiche.
    interne, walk-in, spostamento e unione dei tavoli
 2. ✅ **Motore di disponibilità**: orari + tavoli liberi + combinazioni + tavoli uniti + priorità +
    durate + ritmo + blocchi, con il motivo di ogni orario non disponibile
-3. ⏳ **Gestionale web** (Next.js): configurazione guidata, lista del giorno, griglia sale/orari,
-   piantina con drag & drop e aggiornamento in tempo reale
+3. ✅ **Gestionale web** (Next.js): configurazione guidata, lista del giorno, nuova prenotazione con
+   orari disponibili, sala con spostamento e unione dei tavoli, editor della disposizione,
+   configurazione completa. Da fare: aggiornamento istantaneo (oggi ogni 20 secondi), griglia
+   sale × orari, app per telefono
 4. ⏳ **Pagina di prenotazione pubblica** e widget per il sito
 5. ⏳ **Email** di conferma, promemoria, modifica e cancellazione
 6. ⏳ **Scheda ospite** (note del profilo, storico visite, riconoscimento dal numero) e importazione
