@@ -5,7 +5,7 @@ import { createPasswordHasher } from "./lib/passwords.js";
 import { createTokenService } from "./lib/tokens.js";
 
 const config = loadConfig();
-const database = createDatabase(config.databaseUrl);
+const database = await createDatabase(config.databaseUrl);
 if (config.autoMigrate) await database.migrate();
 
 const app = await buildApp({
@@ -16,6 +16,7 @@ const app = await buildApp({
     now: () => new Date(),
   },
   corsOrigins: config.corsOrigins,
+  trustProxy: config.trustProxy,
   logger:
     config.env === "development"
       ? { level: config.logLevel, transport: { target: "pino-pretty" } }

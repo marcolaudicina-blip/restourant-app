@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 const config: NextConfig = {
-  // Workspace packages ship TypeScript sources.
-  transpilePackages: ["@restourant/shared"],
+  // Workspace packages ship TypeScript sources. @restourant/api runs embedded when API_URL is unset.
+  transpilePackages: ["@restourant/shared", "@restourant/db", "@restourant/api"],
   poweredByHeader: false,
   // Linting runs in its own CI step with the workspace ESLint config.
   eslint: { ignoreDuringBuilds: true },

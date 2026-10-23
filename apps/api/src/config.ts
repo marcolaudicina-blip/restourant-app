@@ -16,6 +16,10 @@ const envSchema = z.object({
         .map((s) => s.trim())
         .filter(Boolean),
     ),
+  TRUST_PROXY: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
   /** Apply pending migrations at startup. Production runs `pnpm db:migrate` as a release step instead. */
   AUTO_MIGRATE: z
     .enum(["true", "false"])
@@ -32,6 +36,7 @@ export type AppConfig = {
   logLevel: string;
   corsOrigins: string[];
   autoMigrate: boolean;
+  trustProxy: boolean;
 };
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -50,5 +55,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     logLevel: e.LOG_LEVEL,
     corsOrigins: e.CORS_ORIGINS,
     autoMigrate: env.AUTO_MIGRATE === undefined ? e.NODE_ENV !== "production" : e.AUTO_MIGRATE,
+    trustProxy: e.TRUST_PROXY,
   };
 }

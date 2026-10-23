@@ -52,7 +52,5 @@ Documentazione delle API (OpenAPI): `GET /docs/openapi.json`.
 
 ## In produzione
 
-1. `DATABASE_URL` punta a PostgreSQL (consigliato un provider in UE, es. Neon o Supabase)
-2. `pnpm install --frozen-lockfile && pnpm build`
-3. `pnpm db:migrate` (passo di rilascio)
-4. `NODE_ENV=production node apps/api/dist/server.js`
+Gestionale e API in un solo progetto Vercel con database PostgreSQL (Neon): vedi
+[docs/deploy.md](docs/deploy.md).

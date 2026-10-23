@@ -66,6 +66,9 @@ pnpm db:migrate      # applies migrations to $DATABASE_URL
 
 ## Web app
 
+- **Two runtime modes**: with `API_URL` set, `src/lib/api-server.ts` proxies to a standalone API; without
+  it the API runs embedded in the Next.js server (`@restourant/api/embedded`, uses `DATABASE_URL` and
+  `JWT_SECRET`). Production on Vercel uses the embedded mode; see `docs/deploy.md`.
 - The browser never sees the API token: `/api/session` (login/register/logout) stores it in the
   httpOnly `rs_session` cookie, and `/api/v1/*` is a proxy that adds `Authorization`. Client code calls
   `api()` from `src/lib/api.ts` with API paths (`/restaurants/...`).
@@ -82,4 +85,5 @@ pnpm db:migrate      # applies migrations to $DATABASE_URL
 - API: `apps/api/test` builds the real app on an in-memory PGlite database via `createTestApp()`
   and drives it with `app.inject`. Prefer adding API tests for new endpoints.
 - Web: `apps/web/e2e` (Playwright, desktop + tablet viewports) runs the full flow against a real API on
-  PGlite. Screenshots of each step land in `apps/web/test-results/`.
+  PGlite. With `E2E_DATABASE_URL` (a migrated Postgres) it runs the embedded mode instead, as in CI's
+  `e2e-postgres` job. Screenshots of each step land in `apps/web/test-results/`.

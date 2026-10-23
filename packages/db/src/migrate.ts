@@ -6,7 +6,7 @@ if (!url) {
   process.exit(1);
 }
 
-const handle = createDatabase(url);
+const handle = await createDatabase(url);
 try {
   await handle.migrate();
   console.log("Migrations applied");

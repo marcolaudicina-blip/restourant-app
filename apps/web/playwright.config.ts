@@ -1,12 +1,44 @@
 import { defineConfig, devices } from "@playwright/test";
 
 /*
- * End-to-end tests drive the real web app against the real API on an in-memory database.
+ * End-to-end tests drive the real web app against the real API.
  * Run `pnpm --filter @restourant/web build` first; the web server uses the production build.
+ *
+ * Two modes:
+ * - default: a standalone API on an in-memory database, the web app proxies to it (API_URL);
+ * - E2E_DATABASE_URL set: the API runs embedded in the web app against that (migrated) Postgres,
+ *   exactly as on Vercel.
  */
 
 const API_PORT = 3101;
 const WEB_PORT = 3100;
+const JWT_SECRET = "e2e-secret-e2e-secret-e2e-secret-e2e";
+const embeddedDatabase = process.env.E2E_DATABASE_URL;
+
+const standaloneApi = {
+  command: "pnpm --filter @restourant/api exec tsx src/server.ts",
+  url: `http://localhost:${API_PORT}/health`,
+  env: {
+    NODE_ENV: "test",
+    DATABASE_URL: "pglite:memory",
+    JWT_SECRET,
+    PORT: String(API_PORT),
+    LOG_LEVEL: "warn",
+    TRUST_PROXY: "true",
+  },
+  reuseExistingServer: false,
+  timeout: 60_000,
+};
+
+const web = {
+  command: `pnpm exec next start --port ${WEB_PORT}`,
+  url: `http://localhost:${WEB_PORT}/login`,
+  env: embeddedDatabase
+    ? { DATABASE_URL: embeddedDatabase, JWT_SECRET, LOG_LEVEL: "warn" }
+    : { API_URL: `http://localhost:${API_PORT}` },
+  reuseExistingServer: false,
+  timeout: 60_000,
+};
 
 export default defineConfig({
   testDir: "./e2e",
@@ -28,26 +60,5 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"], viewport: { width: 820, height: 1180 }, hasTouch: true },
     },
   ],
-  webServer: [
-    {
-      command: "pnpm --filter @restourant/api exec tsx src/server.ts",
-      url: `http://localhost:${API_PORT}/health`,
-      env: {
-        NODE_ENV: "test",
-        DATABASE_URL: "pglite:memory",
-        JWT_SECRET: "e2e-secret-e2e-secret-e2e-secret-e2e",
-        PORT: String(API_PORT),
-        LOG_LEVEL: "warn",
-      },
-      reuseExistingServer: false,
-      timeout: 60_000,
-    },
-    {
-      command: `pnpm exec next start --port ${WEB_PORT}`,
-      url: `http://localhost:${WEB_PORT}/login`,
-      env: { API_URL: `http://localhost:${API_PORT}` },
-      reuseExistingServer: false,
-      timeout: 60_000,
-    },
-  ],
+  webServer: embeddedDatabase ? [web] : [standaloneApi, web],
 });
