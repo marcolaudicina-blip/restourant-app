@@ -44,6 +44,8 @@ export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false,
   retries: process.env.CI ? 1 : 0,
+  // Cold servers on CI can take a few seconds for the first pages after sign-up.
+  expect: { timeout: 10_000 },
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL: `http://localhost:${WEB_PORT}`,
