@@ -14,3 +14,7 @@ export * from "./schemas/service.js";
 export * from "./schemas/duration-rule.js";
 export * from "./schemas/calendar-exception.js";
 export * from "./schemas/table-block.js";
+export * from "./time-zone.js";
+export * from "./seating.js";
+export * from "./availability.js";
+export * from "./schemas/reservation.js";

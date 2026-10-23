@@ -7,6 +7,9 @@ import { createTokenService } from "../src/lib/tokens.js";
 
 export type TestContext = { app: App; database: DatabaseHandle; close: () => Promise<void> };
 
+/** Frozen "now" for every test app: Friday 23 October 2026, 10:00 in Rome. Tests may move it. */
+export const clock = { now: new Date("2026-10-23T08:00:00Z") };
+
 export async function createTestApp(): Promise<TestContext> {
   const database = await createTestDatabase();
   const app = await buildApp({
@@ -15,6 +18,7 @@ export async function createTestApp(): Promise<TestContext> {
       tokens: createTokenService("test-secret-test-secret-test-secret-42"),
       // Low cost keeps the suite fast; production uses the OWASP default.
       passwords: createPasswordHasher(2 ** 10),
+      now: () => clock.now,
     },
     rateLimit: false,
   });

@@ -10,7 +10,7 @@ import {
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { recordAudit } from "../../lib/audit.js";
 import { inTransaction, type TenantContext } from "../../lib/context.js";
-import { notFound, validateEntity } from "../../lib/errors.js";
+import { deleteOrExplain, notFound, validateEntity } from "../../lib/errors.js";
 import { definedOnly } from "../../lib/http.js";
 import { assertRoomsOwned } from "../../lib/ownership.js";
 
@@ -130,7 +130,9 @@ export async function updateService(ctx: TenantContext, id: string, patch: Servi
 export async function deleteService(ctx: TenantContext, id: string): Promise<void> {
   await getService(ctx, id);
   await inTransaction(ctx, async (tx) => {
-    await tx.db.delete(services).where(and(eq(services.id, id), eq(services.restaurantId, ctx.restaurantId)));
+    await deleteOrExplain("Il servizio", () =>
+      tx.db.delete(services).where(and(eq(services.id, id), eq(services.restaurantId, ctx.restaurantId))),
+    );
     await recordAudit(tx, { entity: "service", entityId: id, action: "delete" });
   });
 }

@@ -30,8 +30,11 @@ Due modi, come Superb ma più semplici da gestire:
 
 - **Tavoli affiancati**: sulla piantina si indica quali tavoli si toccano. Il motore di disponibilità
   calcolerà da solo le unioni possibili (tavoli adiacenti), senza elencarle a mano.
-- **Combinazioni fisse**: gruppi con nome e coperti min/max propri (es. "7+8" da 6 a 8 persone),
-  per le unioni che il personale vuole controllare esplicitamente.
+- **Combinazioni fisse**: gruppi con nome, coperti min/max e **priorità** propri (es. "7+8" da 6 a
+  8 persone), per le unioni che il personale vuole controllare esplicitamente.
+
+Come il sistema sceglie tra tavoli singoli, combinazioni e tavoli uniti: vedi
+[prenotazioni](prenotazioni.md).
 
 ## 5. Servizi (turni)
 

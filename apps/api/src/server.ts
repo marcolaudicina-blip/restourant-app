@@ -13,6 +13,7 @@ const app = await buildApp({
     db: database.db,
     tokens: createTokenService(config.jwtSecret),
     passwords: createPasswordHasher(),
+    now: () => new Date(),
   },
   corsOrigins: config.corsOrigins,
   logger:

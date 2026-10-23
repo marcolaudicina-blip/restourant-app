@@ -6,6 +6,8 @@ export const combinationFields = z.object({
   tableIds: uniqueIds.min(2, { message: "Una combinazione richiede almeno due tavoli" }).max(12),
   minCovers: covers,
   maxCovers: covers,
+  /** Same scale as table priority: higher is offered first. */
+  priority: z.number().int().min(0).max(100),
   onlineBookable: z.boolean(),
   isActive: z.boolean(),
 });
@@ -17,7 +19,11 @@ export function checkCombination(
   checkMinMax(ctx, value.minCovers, value.maxCovers, "maxCovers");
 }
 
-export const combinationCreateInput = combinationFields.partial({ onlineBookable: true, isActive: true });
+export const combinationCreateInput = combinationFields.partial({
+  priority: true,
+  onlineBookable: true,
+  isActive: true,
+});
 export const combination = combinationFields.superRefine(checkCombination);
 export const combinationUpdate = combinationFields.partial();
 
@@ -26,6 +32,7 @@ export type CombinationCreateInput = z.infer<typeof combinationCreateInput>;
 export type CombinationUpdate = z.infer<typeof combinationUpdate>;
 
 export const combinationDefaults = {
+  priority: 0,
   onlineBookable: true,
   isActive: true,
 } as const satisfies Partial<CombinationFields>;

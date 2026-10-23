@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   diningTables,
+  reservations,
+  reservationTables,
   restaurants,
   rooms,
   services,
@@ -109,5 +111,50 @@ describe("database constraints", () => {
       .returning();
     expect(service?.firstArrival).toBe("19:00:00");
     expect(service?.fixedSeatings).toEqual(["19:30:00"]);
+  });
+});
+
+describe("reservation overlap", () => {
+  it("refuses two overlapping blocking reservations on the same table", async () => {
+    const { db } = handle;
+    const { restaurant, room } = await seedRestaurant("overlap");
+    const [table] = await db
+      .insert(diningTables)
+      .values({ restaurantId: restaurant.id, roomId: room.id, name: "1", minCovers: 1, maxCovers: 4 })
+      .returning();
+
+    const book = async (from: string, to: string, blocking = true) => {
+      const [r] = await db
+        .insert(reservations)
+        .values({
+          restaurantId: restaurant.id,
+          date: "2026-10-24",
+          startTime: from.slice(11, 16),
+          startsAt: new Date(from),
+          endsAt: new Date(to),
+          durationMinutes: 90,
+          partySize: 2,
+          status: blocking ? "confirmed" : "cancelled",
+          channel: "staff",
+          guestName: "Rossi",
+        })
+        .returning();
+      await db.insert(reservationTables).values({
+        restaurantId: restaurant.id,
+        reservationId: r!.id,
+        tableId: table!.id,
+        startsAt: new Date(from),
+        endsAt: new Date(to),
+        blocking,
+      });
+    };
+
+    await book("2026-10-24T19:00:00Z", "2026-10-24T20:30:00Z");
+    // Back-to-back is fine: ranges are half-open.
+    await book("2026-10-24T20:30:00Z", "2026-10-24T22:00:00Z");
+    // Cancelled reservations do not hold the table.
+    await book("2026-10-24T19:30:00Z", "2026-10-24T21:00:00Z", false);
+    const message = await failure(book("2026-10-24T20:00:00Z", "2026-10-24T21:00:00Z"));
+    expect(message).toMatch(/reservation_tables_no_overlap/);
   });
 });

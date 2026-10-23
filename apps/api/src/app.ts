@@ -14,6 +14,7 @@ import {
   AppError,
   pgErrorCode,
   PG_CHECK_VIOLATION,
+  PG_EXCLUSION_VIOLATION,
   PG_FOREIGN_KEY_VIOLATION,
   PG_UNIQUE_VIOLATION,
 } from "./lib/errors.js";
@@ -22,6 +23,7 @@ import { authRoutes } from "./modules/auth/auth.routes.js";
 import { calendarExceptionRoutes } from "./modules/calendar-exceptions/calendar-exceptions.routes.js";
 import { combinationRoutes } from "./modules/combinations/combinations.routes.js";
 import { durationRuleRoutes } from "./modules/duration-rules/duration-rules.routes.js";
+import { reservationRoutes } from "./modules/reservations/reservations.routes.js";
 import { restaurantRoutes } from "./modules/restaurants/restaurants.routes.js";
 import { roomRoutes } from "./modules/rooms/rooms.routes.js";
 import { serviceRoutes } from "./modules/services/services.routes.js";
@@ -87,6 +89,13 @@ export async function buildApp(options: BuildAppOptions) {
         return send(400, {
           error: { code: "invalid_reference", message: "Riferimento a un elemento inesistente" },
         });
+      case PG_EXCLUSION_VIOLATION:
+        return send(409, {
+          error: {
+            code: "table_taken",
+            message: "Il tavolo è già occupato in quell'orario da un'altra prenotazione",
+          },
+        });
       case PG_CHECK_VIOLATION:
         return send(400, { error: { code: "validation_error", message: "Dati non validi" } });
     }
@@ -136,6 +145,7 @@ export async function buildApp(options: BuildAppOptions) {
           await scope.register(calendarExceptionRoutes);
           await scope.register(tableBlockRoutes);
           await scope.register(setupRoutes);
+          await scope.register(reservationRoutes);
         },
         { prefix: "/restaurants/:restaurantId" },
       );

@@ -107,6 +107,7 @@ export const tableCombinations = pgTable(
     name: text().notNull(),
     minCovers: integer().notNull(),
     maxCovers: integer().notNull(),
+    priority: integer().notNull().default(0),
     onlineBookable: boolean().notNull().default(true),
     isActive: boolean().notNull().default(true),
     ...timestamps,

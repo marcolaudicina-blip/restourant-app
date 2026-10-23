@@ -7,6 +7,8 @@ export type AppDeps = {
   db: Database;
   tokens: TokenService;
   passwords: PasswordHasher;
+  /** Injected so tests can freeze time. */
+  now: () => Date;
 };
 
 declare module "fastify" {

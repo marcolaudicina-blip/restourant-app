@@ -49,6 +49,14 @@ pnpm db:migrate      # applies migrations to $DATABASE_URL
   messages are Italian.
 - Times are local wall-clock `HH:MM` strings, dates `YYYY-MM-DD`, weekdays ISO (1 = Monday).
   Postgres returns `time` as `HH:MM:SS`; normalize with `normalizeTime` when mapping rows.
+- **Seating and availability** are pure functions in `packages/shared` (`seating.ts`, `availability.ts`,
+  `schedule.ts`). The API loads a `FloorContext` (modules/reservations/floor-context.ts) and feeds them.
+  Inside the engine, times are wall-clock minutes from local midnight of the service date
+  (`wallMinutesFrom`), so stays past midnight exceed 1440.
+- **No double booking** is enforced by an exclusion constraint on `reservation_tables`
+  (migration 0002, needs `btree_gist`); keep `starts_at`/`ends_at`/`blocking` there in sync with the
+  reservation via `writeTables` / status updates.
+- Reservation routes use the `reservations.read` / `reservations.write` permissions (staff included).
 - Drizzle uses `casing: "snake_case"`: write camelCase in TypeScript, columns are snake_case.
 
 ## Testing

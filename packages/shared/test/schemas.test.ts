@@ -68,7 +68,14 @@ describe("table", () => {
 
 describe("combination", () => {
   it("needs two distinct tables", () => {
-    const base = { name: "T1+T2", minCovers: 3, maxCovers: 4, onlineBookable: true, isActive: true };
+    const base = {
+      name: "T1+T2",
+      minCovers: 3,
+      maxCovers: 4,
+      priority: 0,
+      onlineBookable: true,
+      isActive: true,
+    };
     expect(combination.safeParse({ ...base, tableIds: [ID_A] }).success).toBe(false);
     expect(combination.safeParse({ ...base, tableIds: [ID_A, ID_A] }).success).toBe(false);
     expect(combination.safeParse({ ...base, tableIds: [ID_A, ID_B] }).success).toBe(true);

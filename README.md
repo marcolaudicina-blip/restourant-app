@@ -15,7 +15,15 @@ come primo cliente.
 - Modelli pronti (trattoria, pizzeria a doppio turno, fine dining) per configurare un locale in un clic
 - Anteprima orari ("cosa vede il cliente sabato sera?") e storico modifiche
 
-Dettagli funzionali: [docs/configurazione.md](docs/configurazione.md) · Architettura:
+**Fase 1: prenotazioni** 🔄
+
+- Prenotazioni con assegnazione automatica dei tavoli per **priorità**, combinazioni predefinite e
+  unione automatica dei tavoli affiancati; scelta manuale, spostamento e unione dei tavoli
+- Disponibilità per orario con il motivo di ogni slot chiuso, ritmo della cucina, walk-in, stati
+- Nessuna doppia prenotazione possibile, garantito dal database
+
+Dettagli funzionali: [docs/configurazione.md](docs/configurazione.md) · Prenotazioni:
+[docs/prenotazioni.md](docs/prenotazioni.md) · Architettura:
 [docs/architettura.md](docs/architettura.md) · Piano: [docs/roadmap.md](docs/roadmap.md)
 
 ## Avvio rapido

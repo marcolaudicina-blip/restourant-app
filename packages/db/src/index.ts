@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
 import { PGlite } from "@electric-sql/pglite";
+import { btree_gist } from "@electric-sql/pglite/contrib/btree_gist";
 import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
 import { migrate as migratePglite } from "drizzle-orm/pglite/migrator";
 import { drizzle as drizzlePg, type NodePgDatabase } from "drizzle-orm/node-postgres";
@@ -32,7 +33,10 @@ const PGLITE_PREFIX = "pglite:";
 export function createDatabase(url: string): DatabaseHandle {
   if (url.startsWith(PGLITE_PREFIX)) {
     const target = url.slice(PGLITE_PREFIX.length);
-    const client = new PGlite(target === "memory" ? undefined : target);
+    const client = new PGlite({
+      ...(target === "memory" ? {} : { dataDir: target }),
+      extensions: { btree_gist },
+    });
     const db = drizzlePglite({ client, schema, casing: "snake_case" });
     return {
       // Both drivers expose the same query builder; the cast keeps one Database type across the app.

@@ -3,7 +3,7 @@ import { room as roomSchema, roomDefaults, type RoomCreateInput, type RoomUpdate
 import { and, asc, eq } from "drizzle-orm";
 import { recordAudit } from "../../lib/audit.js";
 import { inTransaction, type TenantContext } from "../../lib/context.js";
-import { notFound, validateEntity } from "../../lib/errors.js";
+import { deleteOrExplain, notFound, validateEntity } from "../../lib/errors.js";
 import { definedOnly, withoutTenant } from "../../lib/http.js";
 
 type RoomRow = typeof rooms.$inferSelect;
@@ -59,7 +59,9 @@ export async function updateRoom(ctx: TenantContext, id: string, patch: RoomUpda
 export async function deleteRoom(ctx: TenantContext, id: string): Promise<void> {
   await getRoom(ctx, id);
   await inTransaction(ctx, async (tx) => {
-    await tx.db.delete(rooms).where(and(eq(rooms.id, id), eq(rooms.restaurantId, ctx.restaurantId)));
+    await deleteOrExplain("La sala", () =>
+      tx.db.delete(rooms).where(and(eq(rooms.id, id), eq(rooms.restaurantId, ctx.restaurantId))),
+    );
     await recordAudit(tx, { entity: "room", entityId: id, action: "delete" });
   });
 }

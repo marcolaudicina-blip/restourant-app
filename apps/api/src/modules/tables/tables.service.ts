@@ -9,7 +9,7 @@ import {
 import { and, asc, eq } from "drizzle-orm";
 import { recordAudit } from "../../lib/audit.js";
 import { inTransaction, type TenantContext } from "../../lib/context.js";
-import { notFound, validateEntity } from "../../lib/errors.js";
+import { deleteOrExplain, notFound, validateEntity } from "../../lib/errors.js";
 import { definedOnly, withoutTenant } from "../../lib/http.js";
 import { assertRoomsOwned, assertTablesOwned } from "../../lib/ownership.js";
 
@@ -74,9 +74,11 @@ export async function updateTable(ctx: TenantContext, id: string, patch: TableUp
 export async function deleteTable(ctx: TenantContext, id: string): Promise<void> {
   await getTable(ctx, id);
   await inTransaction(ctx, async (tx) => {
-    await tx.db
-      .delete(diningTables)
-      .where(and(eq(diningTables.id, id), eq(diningTables.restaurantId, ctx.restaurantId)));
+    await deleteOrExplain("Il tavolo", () =>
+      tx.db
+        .delete(diningTables)
+        .where(and(eq(diningTables.id, id), eq(diningTables.restaurantId, ctx.restaurantId))),
+    );
     await recordAudit(tx, { entity: "table", entityId: id, action: "delete" });
   });
 }

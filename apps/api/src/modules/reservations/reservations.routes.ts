@@ -1,0 +1,90 @@
+import {
+  dateString,
+  partySize,
+  RESERVATION_STATUSES,
+  reservationCreateInput,
+  reservationStatusInput,
+  reservationTablesInput,
+  reservationUpdate,
+} from "@restourant/shared";
+import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
+import { z } from "zod";
+import { tenant } from "../../lib/context.js";
+import { idParams } from "../../lib/http.js";
+import { getAvailability } from "./availability.service.js";
+import {
+  createReservation,
+  getReservation,
+  listReservations,
+  setReservationStatus,
+  setReservationTables,
+  updateReservation,
+} from "./reservations.service.js";
+
+const READ = { permission: "reservations.read" } as const;
+const WRITE = { permission: "reservations.write" } as const;
+
+const availabilityQuery = z.object({
+  date: dateString,
+  partySize: z.coerce.number().pipe(partySize),
+  channel: z.enum(["staff", "online"]).default("staff"),
+  roomId: z.uuid().optional(),
+});
+
+const listQuery = z.object({
+  date: dateString,
+  /** Comma separated, e.g. "confirmed,seated". */
+  status: z
+    .string()
+    .optional()
+    .transform((v) => (v ? v.split(",").map((s) => s.trim()) : undefined))
+    .pipe(z.array(z.enum(RESERVATION_STATUSES)).optional()),
+});
+
+export const reservationRoutes: FastifyPluginAsyncZod = async (app) => {
+  app.get("/availability", { schema: { querystring: availabilityQuery }, config: READ }, async (request) => ({
+    data: await getAvailability(tenant(request), request.query, request.server.deps.now()),
+  }));
+
+  app.get("/reservations", { schema: { querystring: listQuery }, config: READ }, async (request) => ({
+    data: await listReservations(tenant(request), {
+      date: request.query.date,
+      statuses: request.query.status,
+    }),
+  }));
+
+  app.post(
+    "/reservations",
+    { schema: { body: reservationCreateInput }, config: WRITE },
+    async (request, reply) => {
+      reply.code(201);
+      return { data: await createReservation(tenant(request), request.body) };
+    },
+  );
+
+  app.get("/reservations/:id", { schema: { params: idParams }, config: READ }, async (request) => ({
+    data: await getReservation(tenant(request), request.params.id),
+  }));
+
+  app.patch(
+    "/reservations/:id",
+    { schema: { params: idParams, body: reservationUpdate }, config: WRITE },
+    async (request) => ({ data: await updateReservation(tenant(request), request.params.id, request.body) }),
+  );
+
+  app.put(
+    "/reservations/:id/tables",
+    { schema: { params: idParams, body: reservationTablesInput }, config: WRITE },
+    async (request) => ({
+      data: await setReservationTables(tenant(request), request.params.id, request.body),
+    }),
+  );
+
+  app.post(
+    "/reservations/:id/status",
+    { schema: { params: idParams, body: reservationStatusInput }, config: WRITE },
+    async (request) => ({
+      data: await setReservationStatus(tenant(request), request.params.id, request.body.status),
+    }),
+  );
+};

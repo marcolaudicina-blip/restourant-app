@@ -54,3 +54,19 @@ export function pgConstraint(error: unknown): string | undefined {
 export const PG_UNIQUE_VIOLATION = "23505";
 export const PG_FOREIGN_KEY_VIOLATION = "23503";
 export const PG_CHECK_VIOLATION = "23514";
+export const PG_EXCLUSION_VIOLATION = "23P01";
+
+/**
+ * Runs a delete and turns "still referenced" into a clear 409: things with reservation history
+ * (tables, services, rooms) must be deactivated rather than deleted.
+ */
+export async function deleteOrExplain<T>(what: string, fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (error) {
+    if (pgErrorCode(error) === PG_FOREIGN_KEY_VIOLATION) {
+      throw conflict("in_use", `${what} ha prenotazioni collegate: disattivalo invece di eliminarlo`);
+    }
+    throw error;
+  }
+}

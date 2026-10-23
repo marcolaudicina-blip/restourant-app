@@ -3,6 +3,8 @@ import {
   EXCEPTION_KINDS,
   EXCEPTION_SCOPES,
   LARGE_PARTY_MODES,
+  RESERVATION_CHANNELS,
+  RESERVATION_STATUSES,
   ROLES,
   SEATING_MODES,
   SUPPORTED_LOCALES,
@@ -18,3 +20,5 @@ export const tableShapeEnum = pgEnum("table_shape", TABLE_SHAPES);
 export const seatingModeEnum = pgEnum("seating_mode", SEATING_MODES);
 export const exceptionKindEnum = pgEnum("exception_kind", EXCEPTION_KINDS);
 export const exceptionScopeEnum = pgEnum("exception_scope", EXCEPTION_SCOPES);
+export const reservationStatusEnum = pgEnum("reservation_status", RESERVATION_STATUSES);
+export const reservationChannelEnum = pgEnum("reservation_channel", RESERVATION_CHANNELS);
