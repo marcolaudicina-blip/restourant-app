@@ -4,11 +4,16 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, ty
 import { cn } from "@/lib/cn";
 import type { Table } from "@/lib/types";
 
-const MAX_SCALE = 44;
-const MIN_SCALE = 18;
+/** Pixels per grid unit when the plan is fitted to the available width (before zoom). */
+const MAX_FIT_SCALE = 64;
+const MIN_SCALE = 10;
 const SNAP = 0.5;
 /** Empty margin around the plan, in grid units, so tables at 0,0 don't touch the border. */
 const PAD = 0.5;
+/** While editing the room extends this far past the furthest table, so tables can be moved outward. */
+const EDIT_MARGIN = 6;
+/** Minimum room size while editing, in grid units: roughly a 12 × 8 m dining room. */
+const EDIT_MIN = { x: 24, y: 16 };
 
 export type TableAppearance = {
   /** Fill color; null for a free table. */
@@ -21,8 +26,9 @@ export type TableAppearance = {
 };
 
 /**
- * Floor plan of one room. Table geometry is in grid units, scaled to fit the available width.
- * In `editable` mode tables can be dragged; the new position is reported on release.
+ * Floor plan of one room. Table geometry is in grid units; the plan is scaled to fit the available
+ * width and then multiplied by `zoom`. In `editable` mode tables can be dragged (the new position is
+ * reported on release) and the room grows as tables are moved outward.
  */
 export function FloorCanvas({
   tables,
@@ -31,6 +37,7 @@ export function FloorCanvas({
   onTableClick,
   editable = false,
   onMove,
+  zoom = 1,
 }: {
   tables: Table[];
   adjacencies?: { tableAId: string; tableBId: string }[];
@@ -38,6 +45,7 @@ export function FloorCanvas({
   onTableClick?: (table: Table) => void;
   editable?: boolean;
   onMove?: (table: Table, position: { posX: number; posY: number }) => void;
+  zoom?: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(800);
@@ -58,9 +66,12 @@ export function FloorCanvas({
     return () => observer.disconnect();
   }, []);
 
-  const extentX = Math.max(12, ...tables.map((t) => t.posX + t.width)) + 1 + PAD;
-  const extentY = Math.max(8, ...tables.map((t) => t.posY + t.height)) + 1 + PAD;
-  const scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, (width - 2) / extentX));
+  const contentX = Math.max(0, ...tables.map((t) => t.posX + t.width));
+  const contentY = Math.max(0, ...tables.map((t) => t.posY + t.height));
+  const extentX = (editable ? Math.max(EDIT_MIN.x, contentX + EDIT_MARGIN) : Math.max(8, contentX + 1)) + PAD;
+  const extentY = (editable ? Math.max(EDIT_MIN.y, contentY + EDIT_MARGIN) : Math.max(5, contentY + 1)) + PAD;
+  const fitScale = Math.min(MAX_FIT_SCALE, (width - 2) / extentX);
+  const scale = Math.max(MIN_SCALE, fitScale * zoom);
   const snap = (v: number) => Math.max(0, Math.round(v / SNAP) * SNAP);
 
   const position = (t: Table) =>
@@ -91,8 +102,12 @@ export function FloorCanvas({
     else onTableClick?.(table);
   }
 
+  // Text shrinks with the tables so small zoom levels stay readable without overflowing.
+  const nameSize = Math.max(10, Math.min(16, scale * 0.32));
+  const captionSize = Math.max(9, Math.min(12, scale * 0.24));
+
   return (
-    <div ref={containerRef} className="w-full overflow-x-auto">
+    <div ref={containerRef} className="max-h-[75dvh] w-full overflow-auto">
       <div
         className={cn(
           "relative rounded-xl border border-line",
@@ -139,6 +154,7 @@ export function FloorCanvas({
               onPointerUp={() => onPointerUp(table)}
               onClick={editable ? undefined : () => onTableClick?.(table)}
               aria-label={`Tavolo ${table.name}`}
+              aria-pressed={look.highlighted ?? false}
               className={cn(
                 "absolute flex flex-col items-center justify-center overflow-hidden border-2 text-center transition-shadow select-none",
                 table.shape === "round" ? "rounded-full" : "rounded-xl",
@@ -158,13 +174,18 @@ export function FloorCanvas({
                 borderColor: look.outlined ?? look.color ?? "#acd8cf",
               }}
             >
-              <span className="text-sm font-semibold leading-tight">{table.name}</span>
+              <span className="font-semibold leading-tight" style={{ fontSize: nameSize }}>
+                {table.name}
+              </span>
               {look.caption ? (
-                <span className="max-w-full truncate px-1 text-[11px] leading-tight text-ink/80">
+                <span
+                  className="max-w-full truncate px-1 leading-tight text-ink/80"
+                  style={{ fontSize: captionSize }}
+                >
                   {look.caption}
                 </span>
               ) : (
-                <span className="text-[11px] leading-tight text-muted">
+                <span className="leading-tight text-muted" style={{ fontSize: captionSize }}>
                   {table.minCovers}-{table.maxCovers}
                 </span>
               )}
@@ -172,6 +193,40 @@ export function FloorCanvas({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+const ZOOM_STEPS = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3];
+
+/** − / percentage / + / "Adatta" buttons for the floor plan. */
+export function ZoomControls({ zoom, onChange }: { zoom: number; onChange: (zoom: number) => void }) {
+  const index = ZOOM_STEPS.findIndex((z) => z >= zoom);
+  const step = (delta: number) =>
+    onChange(ZOOM_STEPS[Math.min(ZOOM_STEPS.length - 1, Math.max(0, (index < 0 ? 2 : index) + delta))]!);
+  return (
+    <div className="flex items-center rounded-lg border border-line bg-surface text-sm">
+      <button
+        onClick={() => step(-1)}
+        className="px-3 py-1.5 font-semibold hover:bg-canvas"
+        aria-label="Rimpicciolisci"
+      >
+        −
+      </button>
+      <button
+        onClick={() => onChange(1)}
+        className="min-w-16 border-x border-line px-2 py-1.5 tabular-nums hover:bg-canvas"
+        title="Adatta alla larghezza"
+      >
+        {zoom === 1 ? "Adatta" : `${Math.round(zoom * 100)}%`}
+      </button>
+      <button
+        onClick={() => step(1)}
+        className="px-3 py-1.5 font-semibold hover:bg-canvas"
+        aria-label="Ingrandisci"
+      >
+        +
+      </button>
     </div>
   );
 }

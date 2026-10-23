@@ -96,12 +96,23 @@ test("from sign-up to a full service", async ({ page }, testInfo) => {
 
   // Layout editor and services render.
   await page.goto("/sala");
+  await page.getByRole("button", { name: "Ingrandisci" }).click();
+  await expect(page.getByRole("button", { name: "125%" })).toBeVisible();
+  await page.getByRole("button", { name: "125%" }).click();
   await page.getByRole("button", { name: "Modifica disposizione" }).click();
-  await page.getByRole("button", { name: "Tavoli affiancati" }).click();
+
+  // Layout editor: add a table, make it round, then link tables.
+  await page.getByRole("button", { name: "Aggiungi tavolo" }).click();
+  await expect(page.getByRole("button", { name: "Tavolo T13" })).toBeVisible();
+  await expect(page.getByLabel("Nome tavolo")).toHaveValue("T13");
+  await page.getByRole("button", { name: "Rotondo" }).click();
+  await expect(page.getByRole("button", { name: "Tavolo T13" })).toHaveClass(/rounded-full/);
   await shot("06-disposizione");
+  await page.getByRole("button", { name: "Tavoli affiancati" }).click();
+  await shot("07-tavoli-affiancati");
   await page.goto("/configurazione/servizi");
   await expect(page.getByText("Cena", { exact: true }).first()).toBeVisible();
-  await shot("07-servizi");
+  await shot("08-servizi");
 });
 
 test("login, wrong password and logout", async ({ page }) => {

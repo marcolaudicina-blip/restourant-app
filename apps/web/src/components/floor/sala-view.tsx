@@ -7,7 +7,7 @@ import {
   timeToMinutes,
   wallMinutesFrom,
 } from "@restourant/shared";
-import { Combine, Link2, Move, PencilRuler, Users, X } from "lucide-react";
+import { Combine, Link2, Move, PencilRuler, Plus, Users, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { api, ApiError, describeError } from "@/lib/api";
 import { cn } from "@/lib/cn";
@@ -16,6 +16,7 @@ import { useConfig, useReservations, useRestaurantMutation } from "@/lib/queries
 import { useRestaurant } from "@/lib/restaurant";
 import type { Reservation, Table } from "@/lib/types";
 import { useSelectedDate } from "@/lib/use-date";
+import { useConfigSave } from "../config/use-save";
 import { DateNav } from "../date-nav";
 import { ReservationDialog } from "../reservations/reservation-dialog";
 import { useStatusMutation } from "../reservations/reservation-row";
@@ -24,7 +25,8 @@ import { Badge, Card, EmptyState, PageHeader } from "../ui/card";
 import { Select } from "../ui/field";
 import { PageLoader } from "../ui/spinner";
 import { useToast } from "../ui/toast";
-import { FloorCanvas, type TableAppearance } from "./floor-canvas";
+import { FloorCanvas, ZoomControls, type TableAppearance } from "./floor-canvas";
+import { nextTableName, TableInspector } from "./table-inspector";
 
 /** A table counts as "booked soon" when its next guests arrive within this window. */
 const UPCOMING_MINUTES = 60;
@@ -47,6 +49,9 @@ export function SalaView() {
   const [layoutMode, setLayoutMode] = useState<"off" | "move" | "link">("off");
   const [linkFrom, setLinkFrom] = useState<string | null>(null);
   const [editing, setEditing] = useState<Reservation | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
+  const { save: saveConfig } = useConfigSave();
 
   const rooms = useMemo(
     () => (config.data?.rooms ?? []).filter((r) => r.isActive || layoutMode !== "off"),
@@ -122,7 +127,9 @@ export function SalaView() {
       .sort((a, b) => a.start - b.start)[0];
 
   const appearance = (table: Table): TableAppearance => {
-    if (layoutMode !== "off") return { color: null, highlighted: linkFrom === table.id };
+    if (layoutMode !== "off") {
+      return { color: null, highlighted: linkFrom === table.id || selectedTableId === table.id };
+    }
     const current = stayAt(table);
     const upcoming = nextStay(table);
     const isSelectedTable = selected?.tableIds.includes(table.id) ?? false;
@@ -143,7 +150,7 @@ export function SalaView() {
 
   function onTableClick(table: Table) {
     if (layoutMode === "link") return toggleLink(table);
-    if (layoutMode !== "off") return;
+    if (layoutMode === "move") return setSelectedTableId(table.id === selectedTableId ? null : table.id);
     if (selected) {
       const current = selected.tableIds;
       if (joinMode) {
@@ -194,6 +201,26 @@ export function SalaView() {
     setLinkFrom(null);
   }
 
+  async function addTable() {
+    const bottom = Math.max(0, ...roomTables.map((t) => t.posY + t.height));
+    const created = (await saveConfig(
+      "POST",
+      "/tables",
+      {
+        roomId: room!.id,
+        // Follow the naming of this room ("T…" in Sala, "D…" in Dehors).
+        name: nextTableName(config.data?.tables ?? [], roomTables.at(-1)?.name),
+        minCovers: 2,
+        maxCovers: 4,
+        posX: 0,
+        posY: roomTables.length ? bottom + 1 : 0,
+      },
+      "Tavolo aggiunto: trascinalo dove vuoi",
+    ).catch(() => null)) as Table | null;
+    if (created) setSelectedTableId(created.id);
+  }
+
+  const selectedTable = roomTables.find((t) => t.id === selectedTableId) ?? null;
   const serviceStays = stays.filter(
     (s) => !service || s.reservation.serviceId === service.id || !s.reservation.serviceId,
   );
@@ -214,6 +241,7 @@ export function SalaView() {
                   setLayoutMode(layoutMode === "off" ? "move" : "off");
                   setSelectedId(null);
                   setLinkFrom(null);
+                  setSelectedTableId(null);
                 }}
               >
                 <PencilRuler className="h-4 w-4" />{" "}
@@ -292,12 +320,20 @@ export function SalaView() {
             </button>
           </div>
         )}
+        {layoutMode !== "off" && (
+          <Button variant="secondary" onClick={addTable}>
+            <Plus className="h-4 w-4" /> Aggiungi tavolo
+          </Button>
+        )}
+        <div className={cn(layoutMode !== "off" && "ml-auto")}>
+          <ZoomControls zoom={zoom} onChange={setZoom} />
+        </div>
       </div>
 
       {layoutMode !== "off" && (
         <p className="mb-3 rounded-xl bg-brand-50 px-4 py-2.5 text-sm text-brand-900">
           {layoutMode === "move"
-            ? "Trascina i tavoli per riprodurre la tua sala. La posizione si salva quando rilasci."
+            ? "Trascina i tavoli per riprodurre la tua sala: la posizione si salva quando rilasci. Tocca un tavolo per cambiarne forma, misure e posti."
             : "Tocca due tavoli per segnarli come affiancati (o per scollegarli): il sistema potrà unirli per i gruppi numerosi."}
         </p>
       )}
@@ -306,7 +342,9 @@ export function SalaView() {
         <Card className="min-w-0 p-3">
           {roomTables.length === 0 ? (
             <EmptyState title="Nessun tavolo in questa sala">
-              Aggiungili da Configurazione → Sale e tavoli.
+              {layoutMode !== "off"
+                ? "Usa “Aggiungi tavolo” qui sopra."
+                : "Aggiungili da Modifica disposizione."}
             </EmptyState>
           ) : (
             <FloorCanvas
@@ -315,6 +353,7 @@ export function SalaView() {
               appearance={appearance}
               onTableClick={onTableClick}
               editable={layoutMode !== "off"}
+              zoom={zoom}
               onMove={(table, pos) =>
                 saveTable.mutate({ id: table.id, ...pos }, { onError: (e) => toast.error(describeError(e)) })
               }
@@ -329,6 +368,23 @@ export function SalaView() {
             </div>
           )}
         </Card>
+
+        {layoutMode !== "off" &&
+          (selectedTable ? (
+            <TableInspector
+              key={selectedTable.id}
+              table={selectedTable}
+              allTables={config.data?.tables ?? []}
+              onClose={() => setSelectedTableId(null)}
+              onSelect={setSelectedTableId}
+            />
+          ) : (
+            <p className="px-1 text-sm text-muted">
+              {layoutMode === "move"
+                ? "Tocca un tavolo per modificarlo, oppure aggiungine uno nuovo."
+                : "Tocca il primo tavolo, poi quello affiancato."}
+            </p>
+          ))}
 
         {layoutMode === "off" && (
           <div className="flex flex-col gap-3">
