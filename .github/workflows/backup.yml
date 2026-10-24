@@ -1,0 +1,72 @@
+name: Backup
+
+# Every night: a full dump of the production database, encrypted, kept 30 days as a private artifact
+# of this repository. Each dump is restored into an empty PostgreSQL to prove it can be used.
+# Needs two repository secrets (Settings → Secrets and variables → Actions):
+#   BACKUP_DATABASE_URL  the Neon connection string, the direct one (host without "-pooler")
+#   BACKUP_PASSPHRASE    a long random passphrase: without it the backups cannot be opened
+# How to restore: docs/backup.md.
+
+on:
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    services:
+      restore-check:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+      PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+    steps:
+      - name: Check configuration
+        run: |
+          if [ -z "$DATABASE_URL" ] || [ -z "$PASSPHRASE" ]; then
+            echo "::error::Set the BACKUP_DATABASE_URL and BACKUP_PASSPHRASE secrets (see docs/backup.md)"
+            exit 1
+          fi
+
+      - name: Dump the database
+        run: |
+          name="twentyreserve-$(date -u +%Y-%m-%d)"
+          echo "NAME=$name" >> "$GITHUB_ENV"
+          # pg_dump from the newest PostgreSQL image, so it is never older than the server.
+          docker run --rm -e DATABASE_URL postgres:18 \
+            pg_dump --format=custom --no-owner --no-acl "$DATABASE_URL" > "$name.dump"
+          test -s "$name.dump"
+          ls -lh "$name.dump"
+
+      - name: Restore it into an empty database
+        run: |
+          docker run --rm --network host -v "$PWD:/backup" -e PGPASSWORD=postgres postgres:18 \
+            pg_restore --no-owner --no-acl -h localhost -U postgres -d postgres "/backup/$NAME.dump"
+          docker run --rm --network host -e PGPASSWORD=postgres postgres:18 \
+            psql -h localhost -U postgres -d postgres -At -c \
+            "select 'restaurants ' || count(*) from restaurants union all
+             select 'reservations ' || count(*) from reservations union all
+             select 'guests ' || count(*) from guests" | tee counts.txt
+          grep -q "^restaurants [1-9]" counts.txt
+
+      - name: Encrypt
+        run: |
+          gpg --batch --yes --symmetric --cipher-algo AES256 --passphrase-fd 0 \
+            --output "$NAME.dump.gpg" "$NAME.dump" <<< "$PASSPHRASE"
+          rm "$NAME.dump"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.NAME }}
+          path: ${{ env.NAME }}.dump.gpg
+          retention-days: 30
+          if-no-files-found: error

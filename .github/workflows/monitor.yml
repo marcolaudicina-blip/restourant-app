@@ -1,0 +1,39 @@
+name: Monitor
+
+# Every 10 minutes: the app, its database and the showcase site must answer. A failed run makes
+# GitHub email the repository owner (Settings → Notifications → Actions). Addresses can be changed
+# with the repository variables HEALTH_URL and SITE_URL.
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      HEALTH_URL: ${{ vars.HEALTH_URL || 'https://app.twentyreserve.com/api/v1/health' }}
+      SITE_URL: ${{ vars.SITE_URL || 'https://twentyreserve.com' }}
+    steps:
+      - name: App and database
+        run: |
+          # Two attempts: a cold start or a blip should not wake anyone up.
+          for attempt in 1 2; do
+            if body=$(curl -fsS --max-time 20 "$HEALTH_URL") && grep -q '"status":"ok"' <<< "$body"; then
+              echo "$body"; exit 0
+            fi
+            sleep 30
+          done
+          echo "::error::$HEALTH_URL is not healthy"; exit 1
+      - name: Showcase site
+        run: |
+          for attempt in 1 2; do
+            curl -fsS --max-time 20 -o /dev/null "$SITE_URL" && exit 0
+            sleep 30
+          done
+          echo "::error::$SITE_URL does not answer"; exit 1

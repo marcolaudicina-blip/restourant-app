@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
@@ -142,6 +143,20 @@ export async function buildApp(options: BuildAppOptions) {
       await v1.register(publicRoutes, { prefix: "/public" });
       await v1.register(internalRoutes, { prefix: "/internal" });
       await v1.register(adminRoutes, { prefix: "/admin" });
+
+      // For uptime checks (.github/workflows/monitor.yml): answers 503 when the database is down.
+      v1.get("/health", async (_request, reply) => {
+        const started = Date.now();
+        try {
+          await app.deps.db.execute(sql`select 1`);
+          return { data: { status: "ok", database: "ok", latencyMs: Date.now() - started } };
+        } catch (error) {
+          app.log.error({ err: error }, "Health check: database unreachable");
+          return reply
+            .code(503)
+            .send({ error: { code: "unhealthy", message: "Database non raggiungibile" } });
+        }
+      });
 
       v1.get("/templates", async (request) => {
         await authenticate(request);

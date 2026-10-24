@@ -74,3 +74,7 @@ Variabili: `DATABASE_URL`, `JWT_SECRET`, `TRUST_PROXY=true`, `CORS_ORIGINS`. Sul
 `twentyreserve.com,www.twentyreserve.com,twentyreserve.it,www.twentyreserve.it`) quei domini mostrano
 il sito in home e mandano ogni altro indirizzo all'app (`APP_URL`). Su Vercel i domini vanno lasciati
 collegati al progetto **senza** rimando verso app.twentyreserve.com.
+
+## Backup e monitoraggio
+
+Backup notturno cifrato, ripristino e controlli di funzionamento: vedi [backup.md](backup.md).

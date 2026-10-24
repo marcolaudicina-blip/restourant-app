@@ -31,7 +31,7 @@ storico modifiche.
 ## Fase 2: renderlo vendibile
 
 Registrazione self-service con configurazione guidata, abbonamenti Stripe, caparre e carta a garanzia
-con Stripe Connect, Super Admin, backup e disaster recovery, privacy e termini.
+con Stripe Connect, Super Admin, ✅ backup e disaster recovery, privacy e termini.
 
 ## Fase 3: meglio di Superb
 

@@ -108,6 +108,10 @@ pnpm db:migrate      # applies migrations to $DATABASE_URL
 - Tables may have `onlineMaxCovers`: online seating treats it as the table's capacity (alone and joined).
 - Drizzle uses `casing: "snake_case"`: write camelCase in TypeScript, columns are snake_case.
 
+- **Ops**: `GET /v1/health` checks the database (503 when down). `.github/workflows/backup.yml` dumps,
+  test-restores and encrypts the production database nightly (secrets `BACKUP_DATABASE_URL`,
+  `BACKUP_PASSPHRASE`); `monitor.yml` polls health and the site every 10 minutes. See `docs/backup.md`.
+
 ## Web app
 
 - **Two runtime modes**: with `API_URL` set, `src/lib/api-server.ts` proxies to a standalone API; without

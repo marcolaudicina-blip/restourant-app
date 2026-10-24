@@ -84,3 +84,11 @@ describe("platform admin", () => {
     expect((await admin.api.get(`${admin.base}/reservations?date=2026-10-24`)).status).toBe(200);
   });
 });
+
+describe("health check", () => {
+  it("answers with the database status, without a session", async () => {
+    const res = await client(ctx.app).get("/v1/health");
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({ status: "ok", database: "ok" });
+  });
+});
