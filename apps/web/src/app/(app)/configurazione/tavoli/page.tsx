@@ -42,11 +42,12 @@ export default function RoomsAndTablesPage() {
       <div className="flex items-start gap-3 rounded-xl bg-brand-50 px-4 py-3 text-sm text-brand-900">
         <Info className="mt-0.5 h-4 w-4 shrink-0" />
         <p>
-          La <strong>priorità</strong> decide quali tavoli il sistema propone per primi: più è alta, prima
-          viene scelto. I tavoli <strong>solo unito</strong> non vengono mai dati da soli. Per unire tavoli
-          vicini usa <em>Sala → Modifica disposizione → Tavoli affiancati</em>, oppure crea una combinazione.
-          Con <strong>max online</strong> limiti quante persone possono prenotare quel tavolo dal sito (vuoto
-          = fino al massimo del tavolo): lo staff può comunque riempirlo.
+          Il sistema sceglie prima il tavolo che si riempie meglio (per 3 persone un tavolo da 3, per 4 uno da
+          4); tra tavoli con gli stessi posti vince la <strong>priorità</strong> più alta. I tavoli{" "}
+          <strong>solo unito</strong> non vengono mai dati da soli. Per unire tavoli vicini usa{" "}
+          <em>Sala → Modifica disposizione → Tavoli affiancati</em>, oppure crea una combinazione. Con{" "}
+          <strong>max online</strong> limiti quante persone possono prenotare quel tavolo dal sito (vuoto =
+          fino al massimo del tavolo): lo staff può comunque riempirlo.
         </p>
       </div>
 

@@ -356,7 +356,7 @@ export function ReservationDialog({
                       Automatico: <strong>{selectedSlot.option.name}</strong>
                     </>
                   ) : (
-                    "Automatico, per priorità"
+                    "Automatico: il tavolo più adatto"
                   )}
                 </span>
                 <Button size="sm" variant="secondary" onClick={() => setManualTables([])}>

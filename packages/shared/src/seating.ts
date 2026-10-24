@@ -8,7 +8,8 @@ import type { Channel } from "./schedule.js";
  *   2. combination  a predefined group of tables (set up by the restaurant)
  *   3. joined       adjacent tables pushed together, discovered from the floor plan
  *
- * Within a kind: higher priority first, then the tightest fit (fewest empty seats), then fewer tables,
+ * Within a kind: the tightest fit first (fewest empty seats: three people get a table for three
+ * before one for four), then higher priority among options with the same seats, then fewer tables,
  * then the room order (main room first) and the table name. A joined option takes the average
  * priority of its tables. Online, tables count with their online capacity (`onlineMaxCovers`).
  */
@@ -78,8 +79,8 @@ export const optionKey = (tableIds: readonly string[]) => [...tableIds].sort().j
 export function compareOptions(roomOrder: (roomId: string) => number = () => 0) {
   return (a: SeatingOption, b: SeatingOption): number =>
     KIND_RANK[a.kind] - KIND_RANK[b.kind] ||
-    b.priority - a.priority ||
     a.maxCovers - b.maxCovers ||
+    b.priority - a.priority ||
     a.tableIds.length - b.tableIds.length ||
     roomOrder(a.roomId) - roomOrder(b.roomId) ||
     byName.compare(a.name, b.name);

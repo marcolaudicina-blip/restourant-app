@@ -20,8 +20,8 @@ All'interno di ogni tipo l'ordine è:
 
 | #   | Criterio                      | Esempio                                                    |
 | --- | ----------------------------- | ---------------------------------------------------------- |
-| 1   | **Priorità** più alta (0–100) | T1 con priorità 10 viene scelto prima di T2 con priorità 5 |
-| 2   | Posti più vicini al gruppo    | per 2 persone, un tavolo da 2 prima di uno da 4            |
+| 1   | Posti più vicini al gruppo    | per 3 persone un tavolo da 3 prima di uno da 4; per 4 da 4 |
+| 2   | **Priorità** più alta (0–100) | tra due tavoli da 6, prima quello con priorità più alta    |
 | 3   | Meno tavoli                   |                                                            |
 | 4   | Ordine delle sale             | a parità di tutto, prima la sala principale                |
 | 5   | Nome del tavolo               | T2 prima di T10                                            |

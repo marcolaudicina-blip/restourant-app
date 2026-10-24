@@ -67,18 +67,26 @@ describe("single tables", () => {
     expect(options(9, { tables })).toEqual([]);
   });
 
-  it("puts higher priority tables first, regardless of name or fit", () => {
+  it("fills the tightest table first, whatever its priority", () => {
     const tables = [
       table("T1", 2, 4),
       table("T2", 2, 6, { priority: 10 }),
       table("T3", 2, 4, { priority: 5 }),
+      table("T4", 1, 3),
     ];
-    expect(names(options(4, { tables }))).toEqual(["T2", "T3", "T1"]);
+    // Four people: the tables for four (higher priority first), then the one for six.
+    expect(names(options(4, { tables }))).toEqual(["T3", "T1", "T2"]);
+    // Three people: the table for three first.
+    expect(names(options(3, { tables }))[0]).toBe("T4");
   });
 
-  it("breaks priority ties with the tightest fit, then the table name", () => {
-    const tables = [table("T10", 2, 6), table("T9", 2, 4), table("T2", 2, 4)];
-    expect(names(options(4, { tables }))).toEqual(["T2", "T9", "T10"]);
+  it("among tables with the same seats, picks the higher priority, then the name", () => {
+    const tables = [
+      table("T10", 2, 6, { priority: 3 }),
+      table("T9", 2, 6, { priority: 8 }),
+      table("T2", 2, 6),
+    ];
+    expect(names(options(6, { tables }))).toEqual(["T9", "T10", "T2"]);
   });
 
   it("skips inactive tables, inactive rooms and combination-only tables", () => {

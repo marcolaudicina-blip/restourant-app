@@ -239,8 +239,8 @@ function options(cfg: Config, party: number, channel: "online" | "staff", servic
   return out.sort(
     (a, b) =>
       rank[a.kind] - rank[b.kind] ||
-      b.priority - a.priority ||
       a.capacity - b.capacity ||
+      b.priority - a.priority ||
       a.tableIds.length - b.tableIds.length ||
       order(a.roomId) - order(b.roomId) ||
       collator.compare(a.name, b.name),
@@ -785,7 +785,9 @@ async function runRestaurant(
       return;
     }
     const r = (await owner.api.get(`${owner.base}/reservations/${id}`)).body.data as Reservation;
-    checkPlacement("modifica cliente", before, r, "online", old.tableIds);
+    // Tables the guest already had (maybe chosen by staff) may stay even if not offered online.
+    const kept = r.tableIds.every((t) => old.tableIds.includes(t));
+    checkPlacement("modifica cliente", before, r, kept ? "staff" : "online", old.tableIds);
     // Moved although the old tables (or part of them) still suited the party at that time.
     const service = cfg.services.find((x) => x.id === r.serviceId) ?? null;
     const stillFits = options(cfg, party, "staff", service).some(
