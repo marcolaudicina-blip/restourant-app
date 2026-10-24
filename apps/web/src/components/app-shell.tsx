@@ -1,7 +1,15 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { CalendarDays, Contact, LayoutGrid, LogOut, Settings, UtensilsCrossed } from "lucide-react";
+import {
+  CalendarDays,
+  CircleUserRound,
+  Contact,
+  LayoutGrid,
+  LogOut,
+  Settings,
+  UtensilsCrossed,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
@@ -21,6 +29,8 @@ const NAV = [
   { href: "/clienti", label: "Clienti", icon: Contact },
   { href: "/configurazione", label: "Configurazione", icon: Settings },
 ];
+/** On phones there is no sidebar footer: the account gets a tab. */
+const MOBILE_EXTRA = [{ href: "/account", label: "Account", icon: CircleUserRound }];
 
 async function logout() {
   await api("/api/session", { method: "DELETE" }).catch(() => undefined);
@@ -90,8 +100,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
           <Nav className="mt-4 flex-1 flex-col px-3" />
           <div className="border-t border-line p-3">
-            <p className="truncate px-2 text-sm font-medium">{me.data?.user.fullName}</p>
-            <p className="px-2 text-xs text-muted">{ROLE_LABELS[membership.role]}</p>
+            <Link href="/account" className="block rounded-lg px-2 py-1 hover:bg-black/5">
+              <p className="truncate text-sm font-medium">{me.data?.user.fullName}</p>
+              <p className="text-xs text-muted">{ROLE_LABELS[membership.role]} · Il mio account</p>
+            </Link>
             <Button variant="ghost" size="sm" onClick={logout} className="mt-2 w-full">
               <LogOut className="h-4 w-4" /> Esci
             </Button>
@@ -112,7 +124,7 @@ function Nav({ className, compact = false }: { className?: string; compact?: boo
   const pathname = usePathname();
   return (
     <div className={cn("flex gap-1", className)}>
-      {NAV.map(({ href, label, icon: Icon }) => {
+      {(compact ? [...NAV, ...MOBILE_EXTRA] : NAV).map(({ href, label, icon: Icon }) => {
         const active = pathname.startsWith(href);
         return (
           <Link

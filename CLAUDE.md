@@ -74,6 +74,10 @@ pnpm db:migrate      # applies migrations to $DATABASE_URL
 - **Email** goes through `deps.mailer` (lib/mailer.ts: Resend when `RESEND_API_KEY` + `EMAIL_FROM`
   are set, otherwise disabled; tests use the memory mailer, `ctx.sentEmails`). Booking emails are in
   modules/notifications: `sendBookingEmail` never throws and records the outcome in the audit log.
+- **Team and accounts** (modules/team, modules/auth/account.service.ts): owners/managers invite by
+  one-time link (`invitations`, only SHA-256 of tokens stored), managers handle staff only. Password
+  reset by email (1 h) or by a manager's link (24 h). `users.session_version` is in every JWT
+  (`ver`); bumping it on password change/reset rejects older sessions in `authenticate`.
 - Tables may have `onlineMaxCovers`: online seating treats it as the table's capacity (alone and joined).
 - Drizzle uses `casing: "snake_case"`: write camelCase in TypeScript, columns are snake_case.
 
@@ -90,6 +94,8 @@ pnpm db:migrate      # applies migrations to $DATABASE_URL
   (or `useConfigSave` on configuration screens), which invalidates the affected query families.
 - The selected day is in the URL (`?data=YYYY-MM-DD`, `useSelectedDate`). Reservations refetch every 20s
   so devices in the room stay in sync (no websockets yet).
+- `/api/session` opens every session (login, register, accept-invitation, reset-password,
+  change-password) so the token only lives in the httpOnly cookie.
 - `/prenota/[slug]` is the public booking page (`components/booking`), open to everyone and the only
   route that may be framed (`?embed=1`). It lays out with container queries (`@3xl:`), so the
   settings preview can render it at phone width. Pictures go through `/api/media/[id]`

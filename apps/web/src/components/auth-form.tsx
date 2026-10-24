@@ -67,6 +67,11 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         <Button type="submit" size="lg" loading={pending} className="justify-center">
           {register ? "Crea account" : "Accedi"}
         </Button>
+        {!register && (
+          <Link href="/password-dimenticata" className="text-center text-sm text-brand-700 hover:underline">
+            Password dimenticata?
+          </Link>
+        )}
       </form>
       <p className="mt-6 text-center text-sm text-muted">
         {register ? "Hai già un account? " : "Nuovo ristorante? "}

@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { PageHeader } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
 import { useRestaurant } from "@/lib/restaurant";
+import type { Permission } from "@restourant/shared";
 
 const SECTIONS = [
   { href: "/configurazione", label: "Panoramica" },
@@ -17,7 +18,8 @@ const SECTIONS = [
   { href: "/configurazione/combinazioni", label: "Combinazioni" },
   { href: "/configurazione/chiusure", label: "Chiusure" },
   { href: "/configurazione/locale", label: "Dati del locale" },
-];
+  { href: "/configurazione/personale", label: "Personale", permission: "team.manage" },
+] as const satisfies { href: string; label: string; permission?: Permission }[];
 
 export default function ConfigLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -33,7 +35,7 @@ export default function ConfigLayout({ children }: { children: ReactNode }) {
         }
       />
       <nav className="-mx-4 mb-5 flex gap-1 overflow-x-auto border-b border-line px-4 md:mx-0 md:px-0">
-        {SECTIONS.map((s) => {
+        {SECTIONS.filter((s) => !("permission" in s) || can(s.permission)).map((s) => {
           const active = s.href === "/configurazione" ? pathname === s.href : pathname.startsWith(s.href);
           return (
             <Link

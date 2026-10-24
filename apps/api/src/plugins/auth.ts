@@ -1,4 +1,4 @@
-import { memberships } from "@restourant/db";
+import { memberships, users } from "@restourant/db";
 import { can, type Permission } from "@restourant/shared";
 import { and, eq } from "drizzle-orm";
 import type { FastifyInstance, FastifyRequest } from "fastify";
@@ -13,8 +13,16 @@ export async function authenticate(request: FastifyRequest): Promise<{ userId: s
   if (!token) throw unauthorized();
   const claims = await request.server.deps.tokens.verify(token);
   if (!claims) throw unauthorized("Sessione scaduta o non valida");
-  request.auth = claims;
-  return claims;
+  // Changing or resetting the password signs out every session opened before.
+  const [user] = await request.server.deps.db
+    .select({ sessionVersion: users.sessionVersion })
+    .from(users)
+    .where(eq(users.id, claims.userId))
+    .limit(1);
+  if (!user) throw unauthorized("Account non più esistente");
+  if (claims.version !== user.sessionVersion) throw unauthorized("Password cambiata: accedi di nuovo");
+  request.auth = { userId: claims.userId };
+  return request.auth;
 }
 
 const restaurantIdParam = z.uuid();

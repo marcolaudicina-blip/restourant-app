@@ -26,6 +26,14 @@ Senza `RESEND_API_KEY` ed `EMAIL_FROM` le email non partono (le prenotazioni fun
 registro modifiche annota `not_configured`). Mettile solo in Production, così le anteprime non
 scrivono mai ai clienti.
 
+### Anteprime
+
+Ogni ramo pubblicato su GitHub crea un'anteprima su Vercel che usa lo **stesso database** della
+produzione. Per questo `scripts/vercel-build.sh` applica le migrazioni e i dati demo **solo nei build
+di produzione** (`VERCEL_ENV=production`): una modifica al database non ancora unita a `main` non tocca
+mai i dati veri. Le anteprime con modifiche al database possono quindi non funzionare finché il ramo
+non è unito.
+
 ### Database
 
 PostgreSQL di Neon dal Marketplace di Vercel (regione Europa, es. Francoforte): _Storage → Create

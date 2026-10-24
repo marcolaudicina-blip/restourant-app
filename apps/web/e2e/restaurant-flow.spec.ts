@@ -209,6 +209,48 @@ test("from sign-up to a full service", async ({ page, browser }, testInfo) => {
   await expect(verdi).toContainText("21:30");
 });
 
+test("the owner invites a waiter, who joins with the link", async ({ page, browser }, testInfo) => {
+  await register(page, "Trattoria Squadra");
+  await page.getByRole("button", { name: /Trattoria/ }).click();
+  await page.getByRole("button", { name: "Usa questo modello" }).click();
+  await expect(page.getByRole("heading", { name: "Configurazione" })).toBeVisible();
+
+  await page.getByRole("link", { name: "Personale" }).click();
+  const email = `luca-${Date.now()}@example.com`;
+  await page.getByLabel("Email").fill(email);
+  await page.getByRole("button", { name: "Invita" }).click();
+  const link = (await page.getByTestId("shared-link").textContent())!;
+  await page.screenshot({ path: testInfo.outputPath("12-invito.png"), fullPage: true });
+  await page.getByRole("button", { name: "Fatto" }).click();
+  await expect(page.getByText("Inviti in attesa")).toBeVisible();
+
+  // The waiter opens the link on their own phone.
+  const phone = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const waiter = await phone.newPage();
+  await waiter.goto(link);
+  await expect(waiter.getByRole("heading", { name: "Unisciti a Trattoria Squadra" })).toBeVisible();
+  await waiter.getByLabel("Il tuo nome").fill("Luca Cameriere");
+  await waiter.getByLabel("Scegli una password").fill("password-di-luca");
+  await waiter.getByRole("button", { name: "Accetta l'invito" }).click();
+  await expect(waiter).toHaveURL(/\/prenotazioni/);
+  await expect(waiter.getByRole("heading", { name: "Prenotazioni" })).toBeVisible();
+  // Staff see the configuration but not the team.
+  await waiter.goto("/configurazione");
+  await expect(waiter.getByRole("link", { name: "Personale" })).toHaveCount(0);
+
+  // Forgotten password: the owner hands over a one-time link.
+  await page.reload();
+  await expect(page.getByText("Luca Cameriere")).toBeVisible();
+  await page.getByRole("button", { name: "Link password" }).click();
+  const resetLink = (await page.getByTestId("shared-link").textContent())!;
+  await waiter.goto(resetLink);
+  await waiter.getByLabel("Nuova password").fill("nuova-password-luca");
+  await waiter.getByLabel("Ripeti la password").fill("nuova-password-luca");
+  await waiter.getByRole("button", { name: "Salva e accedi" }).click();
+  await expect(waiter.getByRole("heading", { name: "Prenotazioni" })).toBeVisible();
+  await phone.close();
+});
+
 test("login, wrong password and logout", async ({ page }) => {
   await page.goto("/prenotazioni");
   await expect(page).toHaveURL(/\/login/);

@@ -55,7 +55,11 @@ export async function register(db: Database, passwords: PasswordHasher, input: R
   }
 }
 
-export async function login(db: Database, passwords: PasswordHasher, input: LoginInput): Promise<PublicUser> {
+export async function login(
+  db: Database,
+  passwords: PasswordHasher,
+  input: LoginInput,
+): Promise<PublicUser & { sessionVersion: number }> {
   const [user] = await db
     .select()
     .from(users)
@@ -63,7 +67,7 @@ export async function login(db: Database, passwords: PasswordHasher, input: Logi
     .limit(1);
   const ok = await passwords.verify(input.password, user?.passwordHash ?? passwords.dummyHash);
   if (!user || !ok) throw unauthorized("Email o password non corretti");
-  return toPublicUser(user);
+  return { ...toPublicUser(user), sessionVersion: user.sessionVersion };
 }
 
 export async function getProfile(db: Database, userId: string) {

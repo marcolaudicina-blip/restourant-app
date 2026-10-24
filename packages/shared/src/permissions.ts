@@ -15,6 +15,8 @@ export const PERMISSIONS = {
   "guests.delete": ["owner", "manager"],
   /** History of who changed what. */
   "audit.read": ["owner", "manager"],
+  /** Invite colleagues, change their role, remove them (managers only for staff). */
+  "team.manage": ["owner", "manager"],
   /** Restaurant profile, billing-relevant data. */
   "restaurant.write": ["owner"],
 } as const satisfies Record<string, readonly Role[]>;

@@ -5,6 +5,7 @@ export * from "./permissions.js";
 export * from "./templates.js";
 export * from "./schemas/common.js";
 export * from "./schemas/auth.js";
+export * from "./schemas/team.js";
 export * from "./schemas/restaurant.js";
 export * from "./schemas/booking-policy.js";
 export * from "./schemas/room.js";

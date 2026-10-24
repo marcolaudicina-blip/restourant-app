@@ -195,3 +195,15 @@ export type PublicBooking = {
   /** The summary email went out. */
   emailSent: boolean;
 };
+
+// Team -----------------------------------------------------------------------------------------
+
+export type TeamMember = { userId: string; fullName: string; email: string; role: Role; since: string };
+export type PendingInvitation = {
+  id: string;
+  email: string;
+  role: Exclude<Role, "owner">;
+  expiresAt: string;
+  createdAt: string;
+};
+export type Team = { members: TeamMember[]; invitations: PendingInvitation[] };

@@ -11,6 +11,7 @@ import type {
   GuestDetail,
   Me,
   Reservation,
+  Team,
   Template,
 } from "./types";
 
@@ -42,6 +43,15 @@ export function useBookingPage() {
   return useQuery({
     queryKey: [...keys.config(restaurantId), "booking-page"],
     queryFn: () => api<BookingPageSettings>(`${base}/booking-page`),
+  });
+}
+
+/** People working in the restaurant and pending invitations (owners and managers). */
+export function useTeam() {
+  const { restaurantId, base } = useRestaurant();
+  return useQuery({
+    queryKey: [...keys.config(restaurantId), "team"],
+    queryFn: () => api<Team>(`${base}/team`),
   });
 }
 
