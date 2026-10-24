@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { dateString, id, nonEmptyName, optionalText, timeString, uniqueIds } from "./common.js";
 import { partySize } from "./reservation.js";
+import { SUPPORTED_LOCALES } from "./restaurant.js";
 
 /** The public booking page of a restaurant: its look and the address of the link. */
 
@@ -79,11 +80,18 @@ export const onlineReservationInput = z.object({
   privacyAccepted: z.literal(true, { message: "Serve il consenso al trattamento dei dati" }),
   /** Hidden field that people never fill in: bots do, and their bookings are dropped. */
   website: z.string().max(200).optional(),
+  /** The page's language: emails to the guest follow it. */
+  locale: z.enum(SUPPORTED_LOCALES).optional(),
 });
 
 export type OnlineReservationInput = z.infer<typeof onlineReservationInput>;
 
 /** A guest moving their own booking from the link in their email. */
-export const guestBookingChangeInput = z.object({ date: dateString, time: timeString, partySize });
+export const guestBookingChangeInput = z.object({
+  date: dateString,
+  time: timeString,
+  partySize,
+  locale: z.enum(SUPPORTED_LOCALES).optional(),
+});
 
 export type GuestBookingChangeInput = z.infer<typeof guestBookingChangeInput>;

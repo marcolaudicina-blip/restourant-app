@@ -34,6 +34,20 @@ Ogni immagine caricata ha un id nuovo e non cambia mai: viene servita da `/api/m
 di un anno. Le immagini tolte dalla pagina vengono cancellate al salvataggio; quelle caricate e mai
 salvate dopo un giorno.
 
+## Lingue
+
+La pagina, il modulo nel sito e la pagina "La tua prenotazione" sono in **italiano e inglese**
+(`components/booking/i18n.tsx`). La lingua si sceglie così:
+
+1. `?lang=it` o `?lang=en` nel link (il selettore **IT · EN** in alto fa proprio questo);
+2. per "La tua prenotazione", la lingua in cui il cliente ha prenotato;
+3. altrimenti la lingua del browser: italiano per i browser in italiano, inglese per tutti gli altri.
+
+La lingua viene salvata con la prenotazione (`reservations.locale`) e le email al cliente
+(conferma, modifiche, cancellazione, promemoria) partono in quella lingua. Per le prenotazioni
+inserite dallo staff con l'email del cliente si può scegliere **Lingua delle email al cliente**.
+I testi scritti dal ristorante (presentazione, avviso, condizioni) restano come sono stati scritti.
+
 ## Inserimento nel sito
 
 Due codici da copiare, sempre nella stessa schermata:
@@ -148,5 +162,5 @@ Per lo staff: `GET`/`PATCH /restaurants/:id/booking-page` e `POST /restaurants/:
 
 ## Da fare
 
-Pagina ed email in inglese, dominio personalizzato del ristorante, orario del promemoria scelto dal
-ristorante.
+Avviso e presentazione anche in inglese, altre lingue, dominio personalizzato del ristorante, orario
+del promemoria scelto dal ristorante.

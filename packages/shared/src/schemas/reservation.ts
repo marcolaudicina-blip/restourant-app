@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { dateString, id, nonEmptyName, optionalText, timeString, uniqueIds } from "./common.js";
+import { SUPPORTED_LOCALES } from "./restaurant.js";
 
 /**
  * Lifecycle of a reservation:
@@ -94,6 +95,8 @@ export const reservationCreateInput = z.object({
   guestEmail: guestFields.guestEmail.optional(),
   guestNote: guestFields.guestNote.optional(),
   internalNote: guestFields.internalNote.optional(),
+  /** Language of the guest's emails. */
+  locale: z.enum(SUPPORTED_LOCALES).optional(),
 });
 
 export const reservationUpdate = z.object({
@@ -110,6 +113,7 @@ export const reservationUpdate = z.object({
   guestEmail: guestFields.guestEmail.optional(),
   guestNote: guestFields.guestNote.optional(),
   internalNote: guestFields.internalNote.optional(),
+  locale: z.enum(SUPPORTED_LOCALES).optional(),
 });
 
 /** Move a reservation to other tables, or join more tables to it. */

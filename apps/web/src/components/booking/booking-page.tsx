@@ -8,6 +8,7 @@ import { mediaUrl } from "@/lib/media";
 import { PRODUCT_NAME } from "../product-logo";
 import type { PublicProfile } from "@/lib/types";
 import { BookingFlow } from "./booking-flow";
+import { GUEST_LOCALES, useGuestText } from "./i18n";
 
 /**
  * The restaurant's public booking page, in the restaurant's colors. `embed` is the compact version
@@ -26,21 +27,24 @@ export function BookingPage({
   className?: string;
 }) {
   const ref = useEmbedHeight(embed);
+  const { t, locale } = useGuestText();
 
   if (embed) {
     return (
       <div
         ref={ref}
+        lang={locale}
         style={brandStyle(profile.page.brandColor)}
         className={cn("@container bg-surface", className)}
       >
         <div className="mx-auto flex max-w-xl flex-col gap-5 p-4">
           <div className="flex items-center gap-3">
             <Logo profile={profile} size="sm" />
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="truncate font-semibold">{profile.name}</p>
-              <p className="text-xs text-muted">Prenota un tavolo</p>
+              <p className="text-xs text-muted">{t.bookATable}</p>
             </div>
+            {!preview && <LanguageSwitch embed />}
           </div>
           <BookingFlow profile={profile} preview={preview} />
           <Footer />
@@ -51,12 +55,16 @@ export function BookingPage({
 
   const photos = profile.page.photoIds;
   return (
-    <div style={brandStyle(profile.page.brandColor)} className={cn("@container bg-canvas", className)}>
-      <Hero profile={profile} />
+    <div
+      lang={locale}
+      style={brandStyle(profile.page.brandColor)}
+      className={cn("@container bg-canvas", className)}
+    >
+      <Hero profile={profile} preview={preview} />
       <div className="mx-auto grid max-w-5xl gap-8 px-4 pb-12 @3xl:grid-cols-[minmax(0,1fr)_400px] @3xl:gap-10 @3xl:px-6">
         <aside className="relative -mt-6 min-w-0 @3xl:order-2 @3xl:-mt-28">
           <div className="rounded-2xl border border-line bg-surface p-5 shadow-xl shadow-black/5 @3xl:sticky @3xl:top-6">
-            <h2 className="mb-5 text-lg font-semibold">Prenota un tavolo</h2>
+            <h2 className="mb-5 text-lg font-semibold">{t.bookATable}</h2>
             <BookingFlow profile={profile} preview={preview} />
           </div>
         </aside>
@@ -75,10 +83,15 @@ export function BookingPage({
   );
 }
 
-function Hero({ profile }: { profile: PublicProfile }) {
+function Hero({ profile, preview }: { profile: PublicProfile; preview: boolean }) {
   const cover = profile.page.coverId;
   return (
     <header className="relative isolate overflow-hidden bg-[var(--brand)]">
+      {!preview && (
+        <div className="absolute right-3 top-3 z-10 @3xl:right-6">
+          <LanguageSwitch dark />
+        </div>
+      )}
       {cover ? (
         <img src={mediaUrl(cover)} alt="" className="absolute inset-0 -z-10 h-full w-full object-cover" />
       ) : (
@@ -105,13 +118,44 @@ function Hero({ profile }: { profile: PublicProfile }) {
   );
 }
 
+/** IT · EN: reloads the page with `?lang=` (and `embed=1` inside the restaurant's site). */
+export function LanguageSwitch({ dark = false, embed = false }: { dark?: boolean; embed?: boolean }) {
+  const { t, locale } = useGuestText();
+  const href = (lang: string) => (embed ? `?embed=1&lang=${lang}` : `?lang=${lang}`);
+  return (
+    <nav
+      aria-label={t.language}
+      className={cn(
+        "flex shrink-0 overflow-hidden rounded-full text-xs font-semibold",
+        dark ? "bg-black/35 text-white backdrop-blur" : "border border-line text-muted",
+      )}
+    >
+      {GUEST_LOCALES.map((l) => (
+        <a
+          key={l}
+          href={href(l)}
+          hrefLang={l}
+          aria-current={l === locale ? "true" : undefined}
+          className={cn(
+            "px-2.5 py-1 uppercase",
+            l === locale && (dark ? "bg-white/25" : "bg-[var(--brand)] text-[var(--brand-contrast)]"),
+          )}
+        >
+          {l}
+        </a>
+      ))}
+    </nav>
+  );
+}
+
 export function Logo({ profile, size }: { profile: PublicProfile; size: "sm" | "lg" }) {
+  const { t } = useGuestText();
   const box = size === "lg" ? "h-16 w-16 @3xl:h-20 @3xl:w-20 rounded-2xl" : "h-11 w-11 rounded-xl";
   if (profile.page.logoId) {
     return (
       <img
         src={mediaUrl(profile.page.logoId)}
-        alt={`Logo ${profile.name}`}
+        alt={t.logoAlt(profile.name)}
         className={cn(box, "shrink-0 bg-white object-contain p-1.5 shadow-md")}
       />
     );
@@ -131,9 +175,10 @@ export function Logo({ profile, size }: { profile: PublicProfile; size: "sm" | "
 
 function Gallery({ photoIds, name }: { photoIds: string[]; name: string }) {
   const [open, setOpen] = useState<number | null>(null);
+  const { t } = useGuestText();
   return (
     <section>
-      <h2 className="mb-3 text-lg font-semibold">Il locale</h2>
+      <h2 className="mb-3 text-lg font-semibold">{t.thePlace}</h2>
       {/* First picture wide, the others fill rows of equal height whatever their number. */}
       <div className="flex flex-wrap gap-2">
         {photoIds.map((id, i) => (
@@ -141,7 +186,7 @@ function Gallery({ photoIds, name }: { photoIds: string[]; name: string }) {
             key={id}
             type="button"
             onClick={() => setOpen(i)}
-            aria-label={`Foto ${i + 1} di ${photoIds.length}`}
+            aria-label={t.photo(i + 1, photoIds.length)}
             className={cn(
               "overflow-hidden rounded-xl bg-line",
               i === 0 ? "aspect-[16/9] w-full" : "h-32 min-w-36 flex-1 basis-[30%] @xl:h-40",
@@ -149,7 +194,7 @@ function Gallery({ photoIds, name }: { photoIds: string[]; name: string }) {
           >
             <img
               src={mediaUrl(id)}
-              alt={`${name}, foto ${i + 1}`}
+              alt={t.photoAlt(name, i + 1)}
               loading="lazy"
               className="h-full w-full object-cover transition-transform duration-300 hover:scale-[1.03]"
             />
@@ -174,6 +219,7 @@ function Lightbox({
   onIndex: (i: number) => void;
   onClose: () => void;
 }) {
+  const { t } = useGuestText();
   const step = (delta: number) => onIndex((index + delta + photoIds.length) % photoIds.length);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -190,7 +236,7 @@ function Lightbox({
     <div
       role="dialog"
       aria-modal
-      aria-label="Foto del locale"
+      aria-label={t.photos}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
       onClick={onClose}
     >
@@ -202,7 +248,7 @@ function Lightbox({
       />
       <button
         type="button"
-        aria-label="Chiudi"
+        aria-label={t.close}
         onClick={onClose}
         className="absolute right-4 top-4 rounded-full bg-white/15 p-2 text-white hover:bg-white/25"
       >
@@ -212,7 +258,7 @@ function Lightbox({
         <>
           <button
             type="button"
-            aria-label="Foto precedente"
+            aria-label={t.previousPhoto}
             className={cn(nav, "left-4")}
             onClick={(e) => {
               e.stopPropagation();
@@ -223,7 +269,7 @@ function Lightbox({
           </button>
           <button
             type="button"
-            aria-label="Foto successiva"
+            aria-label={t.nextPhoto}
             className={cn(nav, "right-4")}
             onClick={(e) => {
               e.stopPropagation();
@@ -239,6 +285,7 @@ function Lightbox({
 }
 
 function Contacts({ profile }: { profile: PublicProfile }) {
+  const { t } = useGuestText();
   const address = [profile.addressLine, [profile.postalCode, profile.city].filter(Boolean).join(" ")]
     .filter(Boolean)
     .join(", ");
@@ -291,7 +338,7 @@ function Contacts({ profile }: { profile: PublicProfile }) {
   if (rows.length === 0) return null;
   return (
     <section>
-      <h2 className="mb-3 text-lg font-semibold">Contatti</h2>
+      <h2 className="mb-3 text-lg font-semibold">{t.contacts}</h2>
       <ul className="flex flex-col gap-2.5 text-sm">
         {rows.map((row, i) => (
           <li key={i} className="flex items-start gap-2.5">
@@ -305,7 +352,12 @@ function Contacts({ profile }: { profile: PublicProfile }) {
 }
 
 export function Footer() {
-  return <p className="pb-6 text-center text-xs text-muted">Prenotazioni online con {PRODUCT_NAME}</p>;
+  const { t } = useGuestText();
+  return (
+    <p className="pb-6 text-center text-xs text-muted">
+      {t.poweredBy} {PRODUCT_NAME}
+    </p>
+  );
 }
 
 /** Inside an iframe, tells the parent page how tall the widget is (see the embed code). */

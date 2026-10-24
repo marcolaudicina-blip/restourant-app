@@ -48,6 +48,13 @@ export async function guestBookingContext(
 
 const ACTIVE: ReservationStatus[] = ["requested", "confirmed"];
 
+const REASON_MESSAGES = {
+  cancelled: "Questa prenotazione è stata cancellata",
+  over: "Questa prenotazione è già passata",
+  contact: "Per modificare o disdire contatta il ristorante",
+  too_late: "Non è più possibile modificarla online: contatta il ristorante",
+};
+
 /** What the guest may still do, and why not when they can't. */
 async function guestActions(ctx: TenantContext, id: string, now: Date) {
   const [reservation, policy] = await Promise.all([getReservation(ctx, id), getBookingPolicy(ctx)]);
@@ -56,17 +63,24 @@ async function guestActions(ctx: TenantContext, id: string, now: Date) {
   const inTime = now < deadline;
   const canCancel = active && inTime && policy.guestCanCancel;
   const canModify = active && inTime && policy.guestCanModify && policy.onlineEnabled;
-  const message =
+  const reason =
     reservation.status === "cancelled"
-      ? "Questa prenotazione è stata cancellata"
+      ? ("cancelled" as const)
       : !active
-        ? "Questa prenotazione è già passata"
+        ? ("over" as const)
         : !policy.guestCanCancel && !policy.guestCanModify
-          ? "Per modificare o disdire contatta il ristorante"
+          ? ("contact" as const)
           : !inTime
-            ? "Non è più possibile modificarla online: contatta il ristorante"
+            ? ("too_late" as const)
             : null;
-  return { reservation, canCancel, canModify, deadline, message };
+  return {
+    reservation,
+    canCancel,
+    canModify,
+    deadline,
+    reason,
+    message: reason ? REASON_MESSAGES[reason] : null,
+  };
 }
 
 export async function getGuestBooking(ctx: TenantContext, id: string, now: Date) {
@@ -82,12 +96,14 @@ export async function getGuestBooking(ctx: TenantContext, id: string, now: Date)
       guestName: r.guestName,
       guestNote: r.guestNote,
       status: r.status,
+      locale: r.locale,
     },
     canCancel: actions.canCancel,
     canModify: actions.canModify,
     /** Until when the guest can act online. */
     deadline: actions.deadline.toISOString(),
     message: actions.message,
+    reason: actions.reason,
   };
 }
 
@@ -143,6 +159,7 @@ export async function changeGuestBooking(
     partySize: input.partySize,
     seating: { tableIds: match.slot.option!.tableIds, durationMinutes: match.slot.durationMinutes! },
     status,
+    locale: input.locale,
     audit: {
       by: "guest",
       from: { date: reservation.date, time: reservation.time, partySize: reservation.partySize },

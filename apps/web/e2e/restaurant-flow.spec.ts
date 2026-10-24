@@ -372,6 +372,14 @@ test("a guest moves and cancels their booking from the email link", async ({ pag
 
   const guestContext = await browser.newContext();
   const guest = await guestContext.newPage();
+  // The public page in English, then back to Italian with the switch.
+  await guest.goto(`/prenota/${slug}?lang=en`);
+  await expect(guest.getByRole("heading", { name: "Book a table" })).toBeVisible();
+  await expect(guest.getByText("How many people?")).toBeVisible();
+  await guest.screenshot({ path: testInfo.outputPath("13b-pagina-inglese.png"), fullPage: true });
+  await guest.getByRole("link", { name: "it", exact: true }).first().click();
+  await expect(guest.getByRole("heading", { name: "Prenota un tavolo" })).toBeVisible();
+
   await guest.goto(`/prenotazione/${bookingToken(id)}`);
   await expect(guest.getByRole("heading", { name: "Ciao Lucia" })).toBeVisible();
   await expect(guest.getByText("Confermata")).toBeVisible();

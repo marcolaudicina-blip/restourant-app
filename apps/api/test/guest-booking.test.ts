@@ -171,6 +171,37 @@ describe("the guest's own booking page", () => {
   });
 });
 
+describe("guests booking in English", () => {
+  it("get their emails and their booking page in English", async () => {
+    const { token } = await bookOnline("tourist@example.com", { locale: "en", guestName: "John Smith" });
+    const confirmation = emailsTo("tourist@example.com").at(-1)!;
+    expect(confirmation.subject).toBe("Booking confirmed · Osteria Pubblica · Saturday 24 October at 20:00");
+    expect(confirmation.text).toContain("Hi John, we look forward to seeing you!");
+    expect(confirmation.text).toContain(
+      "You can change or cancel your booking online up to 2 hours before arrival.",
+    );
+    expect(confirmation.html).toContain('<html lang="en">');
+    expect((await view(token)).body.data.booking.locale).toBe("en");
+
+    await guest.post(`/v1/public/bookings/${token}/cancel`);
+    expect(emailsTo("tourist@example.com").at(-1)!.subject).toBe(
+      "Booking cancelled · Osteria Pubblica · Saturday 24 October at 20:00",
+    );
+    expect((await view(token)).body.data).toMatchObject({ reason: "cancelled" });
+  });
+
+  it("switch language when they change the booking from the English page", async () => {
+    const { token } = await bookOnline("switch@example.com");
+    await guest.post(`/v1/public/bookings/${token}/change`, {
+      date: SATURDAY,
+      time: "21:00",
+      partySize: 2,
+      locale: "en",
+    });
+    expect(emailsTo("switch@example.com").at(-1)!.subject).toMatch(/^Booking changed/);
+  });
+});
+
 describe("emails for bookings handled by staff", () => {
   const create = (body: object = {}) =>
     owner.api.post(`${owner.base}/reservations`, {

@@ -13,7 +13,7 @@ import type { Reservation } from "@/lib/types";
 import { GuestLookup, type GuestContact, type LinkedGuest } from "../guests/guest-lookup";
 import { Button } from "../ui/button";
 import { Dialog } from "../ui/dialog";
-import { Field, Input, Textarea } from "../ui/field";
+import { Field, Input, Select, Textarea } from "../ui/field";
 import { useToast } from "../ui/toast";
 import { ChannelBadge } from "./channel-badge";
 
@@ -84,6 +84,7 @@ export function ReservationDialog({
     phone: editing?.guestPhone ?? initialGuest?.phone ?? "",
     email: editing?.guestEmail ?? initialGuest?.email ?? "",
   });
+  const [emailLocale, setEmailLocale] = useState<"it" | "en">(editing?.locale ?? "it");
   const [linkedGuest, setLinkedGuest] = useState<LinkedGuest | null>(
     editing?.guest ?? initialGuest?.linked ?? null,
   );
@@ -130,6 +131,7 @@ export function ReservationDialog({
       guestEmail: contact.email.trim() || null,
       guestNote: text("guestNote"),
       internalNote: text("internalNote"),
+      ...(contact.email.trim() ? { locale: emailLocale } : {}),
     };
 
     try {
@@ -398,6 +400,20 @@ export function ReservationDialog({
             linked={linkedGuest}
             onLink={setLinkedGuest}
           />
+          {contact.email.trim() && !walkIn && (
+            <Field label="Lingua delle email al cliente">
+              {(id) => (
+                <Select
+                  id={id}
+                  value={emailLocale}
+                  onChange={(e) => setEmailLocale(e.target.value as "it" | "en")}
+                >
+                  <option value="it">Italiano</option>
+                  <option value="en">English</option>
+                </Select>
+              )}
+            </Field>
+          )}
           <Field label="Note del cliente" hint="Allergie, occasione, richieste">
             {(id) => <Textarea id={id} name="guestNote" defaultValue={editing?.guestNote ?? ""} />}
           </Field>

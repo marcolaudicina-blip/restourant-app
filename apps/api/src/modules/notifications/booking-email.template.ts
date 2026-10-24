@@ -27,7 +27,15 @@ export type BookingEmailInput = {
     city: string | null;
   };
   page: { brandColor: string; logoId: string | null; confirmationNote: string | null };
-  reservation: { date: string; time: string; partySize: number; guestName: string; guestNote: string | null };
+  reservation: {
+    date: string;
+    time: string;
+    partySize: number;
+    guestName: string;
+    guestNote: string | null;
+    /** The language the guest booked in. */
+    locale: "it" | "en";
+  };
   /** e.g. https://app.example.com; links and logo are left out without it. */
   publicUrl: string | null;
   /** The guest's own link to change or cancel the booking, when the restaurant allows it. */
@@ -45,102 +53,170 @@ const escape = (value: string) =>
 /** Escaped, with line breaks kept (`white-space: pre-line` is not reliable in mail clients). */
 const paragraphs = (value: string) => escape(value.trim()).replace(/\r?\n/g, "<br>");
 
-const longDate = (date: string) =>
-  new Intl.DateTimeFormat("it-IT", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    timeZone: "UTC",
-  }).format(new Date(`${date}T12:00:00Z`));
-
-const people = (n: number) => `${n} ${n === 1 ? "persona" : "persone"}`;
-
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-const COPY: Record<
-  BookingEmailKind,
-  { subject: (name: string, when: string, time: string) => string; headline: string; intro: string }
-> = {
-  confirmed: {
-    subject: (name, when) => `Prenotazione confermata · ${name} · ${when}`,
-    headline: "La tua prenotazione è confermata",
-    intro: "ti aspettiamo!",
+type Copy = {
+  subject: (name: string, when: string, time: string) => string;
+  headline: string;
+  intro: string;
+};
+
+/** Everything the email says, in the language the guest booked in. */
+const TEXT = {
+  it: {
+    tag: "it-IT",
+    copy: {
+      confirmed: {
+        subject: (name, when) => `Prenotazione confermata · ${name} · ${when}`,
+        headline: "La tua prenotazione è confermata",
+        intro: "ti aspettiamo!",
+      },
+      requested: {
+        subject: (name) => `Richiesta di prenotazione ricevuta · ${name}`,
+        headline: "Abbiamo ricevuto la tua richiesta",
+        intro: "il ristorante la controllerà e ti confermerà al più presto.",
+      },
+      updated: {
+        subject: (name, when) => `Prenotazione modificata · ${name} · ${when}`,
+        headline: "La tua prenotazione è stata modificata",
+        intro: "ecco i nuovi dettagli.",
+      },
+      cancelled: {
+        subject: (name, when) => `Prenotazione cancellata · ${name} · ${when}`,
+        headline: "La tua prenotazione è stata cancellata",
+        intro: "la prenotazione qui sotto non è più valida. Speriamo di vederti presto!",
+      },
+      reminder: {
+        subject: (name, _when, time) => `Promemoria: ${name}, domani alle ${time}`,
+        headline: "Ti aspettiamo domani",
+        intro: "ti ricordiamo la tua prenotazione.",
+      },
+    } satisfies Record<BookingEmailKind, Copy>,
+    hello: (name: string) => `Ciao ${name}`,
+    when: (day: string, time: string) => `${day} ore ${time}`,
+    people: (n: number) => `${n} ${n === 1 ? "persona" : "persone"}`,
+    day: "Giorno",
+    time: "Ora",
+    partySize: "Persone",
+    requests: "Le tue richieste",
+    info: "Informazioni dal ristorante",
+    phone: "Tel.",
+    manage: (what: "both" | "cancel" | "modify", hours: number) =>
+      `Puoi ${what === "both" ? "modificare o disdire" : what === "cancel" ? "disdire" : "modificare"} la prenotazione online ${
+        hours > 0
+          ? `fino a ${hours === 1 ? "un'ora" : `${hours} ore`} prima dell'arrivo`
+          : "fino all'orario di arrivo"
+      }.`,
+    afterByPhone: " Dopo, contatta il ristorante per telefono.",
+    contact: (phone: boolean, email: boolean, cancelled: boolean) =>
+      `${cancelled ? "Per qualsiasi domanda" : "Per modifiche o disdette"} contatta il ristorante${phone ? " per telefono" : ""}${email ? " o rispondi a questa email" : ""}.`,
+    manageButton: "Gestisci la prenotazione",
+    bookAgain: "Prenota di nuovo",
+    visitPage: "Vai alla pagina del ristorante",
+    why: (name: string) => `Hai ricevuto questa email perché hai prenotato da ${name}.`,
   },
-  requested: {
-    subject: (name) => `Richiesta di prenotazione ricevuta · ${name}`,
-    headline: "Abbiamo ricevuto la tua richiesta",
-    intro: "il ristorante la controllerà e ti confermerà al più presto.",
-  },
-  updated: {
-    subject: (name, when) => `Prenotazione modificata · ${name} · ${when}`,
-    headline: "La tua prenotazione è stata modificata",
-    intro: "ecco i nuovi dettagli.",
-  },
-  cancelled: {
-    subject: (name, when) => `Prenotazione cancellata · ${name} · ${when}`,
-    headline: "La tua prenotazione è stata cancellata",
-    intro: "la prenotazione qui sotto non è più valida. Speriamo di vederti presto!",
-  },
-  reminder: {
-    subject: (name, _when, time) => `Promemoria: ${name}, domani alle ${time}`,
-    headline: "Ti aspettiamo domani",
-    intro: "ti ricordiamo la tua prenotazione.",
+  en: {
+    tag: "en-GB",
+    copy: {
+      confirmed: {
+        subject: (name, when) => `Booking confirmed · ${name} · ${when}`,
+        headline: "Your booking is confirmed",
+        intro: "we look forward to seeing you!",
+      },
+      requested: {
+        subject: (name) => `Booking request received · ${name}`,
+        headline: "We received your request",
+        intro: "the restaurant will check it and confirm as soon as possible.",
+      },
+      updated: {
+        subject: (name, when) => `Booking changed · ${name} · ${when}`,
+        headline: "Your booking has been changed",
+        intro: "here are the new details.",
+      },
+      cancelled: {
+        subject: (name, when) => `Booking cancelled · ${name} · ${when}`,
+        headline: "Your booking has been cancelled",
+        intro: "the booking below is no longer valid. We hope to see you soon!",
+      },
+      reminder: {
+        subject: (name, _when, time) => `Reminder: ${name}, tomorrow at ${time}`,
+        headline: "See you tomorrow",
+        intro: "this is a reminder of your booking.",
+      },
+    } satisfies Record<BookingEmailKind, Copy>,
+    hello: (name: string) => `Hi ${name}`,
+    when: (day: string, time: string) => `${day} at ${time}`,
+    people: (n: number) => `${n} ${n === 1 ? "person" : "people"}`,
+    day: "Day",
+    time: "Time",
+    partySize: "People",
+    requests: "Your requests",
+    info: "Information from the restaurant",
+    phone: "Phone",
+    manage: (what: "both" | "cancel" | "modify", hours: number) =>
+      `You can ${what === "both" ? "change or cancel" : what === "cancel" ? "cancel" : "change"} your booking online ${
+        hours > 0
+          ? `up to ${hours === 1 ? "one hour" : `${hours} hours`} before arrival`
+          : "until your arrival time"
+      }.`,
+    afterByPhone: " After that, please call the restaurant.",
+    contact: (phone: boolean, email: boolean, cancelled: boolean) =>
+      `${cancelled ? "For any questions" : "To change or cancel"}, please contact the restaurant${phone ? " by phone" : ""}${email ? " or reply to this email" : ""}.`,
+    manageButton: "Manage your booking",
+    bookAgain: "Book again",
+    visitPage: "Visit the restaurant's page",
+    why: (name: string) => `You received this email because you booked at ${name}.`,
   },
 };
 
-/** "Puoi modificare o disdire la prenotazione fino a 2 ore prima dell'arrivo." */
-function manageSentence(manage: NonNullable<BookingEmailInput["manage"]>) {
-  const what =
-    manage.canCancel && manage.canModify
-      ? "modificare o disdire"
-      : manage.canCancel
-        ? "disdire"
-        : "modificare";
-  const until =
-    manage.noticeHours > 0
-      ? `fino a ${manage.noticeHours === 1 ? "un'ora" : `${manage.noticeHours} ore`} prima dell'arrivo`
-      : "fino all'orario di arrivo";
-  return `Puoi ${what} la prenotazione online ${until}.`;
-}
-
 export function renderBookingEmail(input: BookingEmailInput): RenderedEmail {
   const { restaurant, page, reservation, kind } = input;
+  const lang = reservation.locale === "en" ? "en" : "it";
+  const t = TEXT[lang];
   const palette = brandPalette(page.brandColor);
-  const day = capitalize(longDate(reservation.date));
+  const day = capitalize(
+    new Intl.DateTimeFormat(t.tag, {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      timeZone: "UTC",
+    }).format(new Date(`${reservation.date}T12:00:00Z`)),
+  );
   const firstName = reservation.guestName.trim().split(/\s+/)[0] ?? reservation.guestName;
-  const copy = COPY[kind];
+  const copy: Copy = t.copy[kind];
   const cancelled = kind === "cancelled";
   const manage = cancelled ? null : input.manage;
 
-  const subject = copy.subject(restaurant.name, `${day} ore ${reservation.time}`, reservation.time);
+  const subject = copy.subject(restaurant.name, t.when(day, reservation.time), reservation.time);
   const headline = copy.headline;
-  const intro = `Ciao ${firstName}, ${copy.intro}`;
+  const intro = `${t.hello(firstName)}, ${copy.intro}`;
 
   const details: [string, string][] = [
-    ["Giorno", day],
-    ["Ora", reservation.time],
-    ["Persone", people(reservation.partySize)],
+    [t.day, day],
+    [t.time, reservation.time],
+    [t.partySize, t.people(reservation.partySize)],
   ];
-  if (reservation.guestNote?.trim()) details.push(["Le tue richieste", reservation.guestNote.trim()]);
+  if (reservation.guestNote?.trim()) details.push([t.requests, reservation.guestNote.trim()]);
 
   const address = [restaurant.addressLine, restaurant.city].filter(Boolean).join(", ");
   const pageUrl = input.publicUrl ? `${input.publicUrl}/prenota/${restaurant.slug}` : null;
   const logoUrl = input.publicUrl && page.logoId ? `${input.publicUrl}/api/media/${page.logoId}` : null;
   const note = cancelled ? null : page.confirmationNote?.trim() || null;
-  const contact = cancelled
-    ? `Per qualsiasi domanda contatta il ristorante${restaurant.phone ? " per telefono" : ""}${restaurant.email ? " o rispondi a questa email" : ""}.`
-    : manage
-      ? `${manageSentence(manage)}${restaurant.phone ? " Dopo, contatta il ristorante per telefono." : ""}`
-      : `Per modifiche o disdette contatta il ristorante${restaurant.phone ? " per telefono" : ""}${restaurant.email ? " o rispondi a questa email" : ""}.`;
+  const contact = manage
+    ? `${t.manage(
+        manage.canCancel && manage.canModify ? "both" : manage.canCancel ? "cancel" : "modify",
+        manage.noticeHours,
+      )}${restaurant.phone ? t.afterByPhone : ""}`
+    : t.contact(Boolean(restaurant.phone), Boolean(restaurant.email), cancelled);
   const action = manage
-    ? { label: "Gestisci la prenotazione", url: manage.url }
+    ? { label: t.manageButton, url: manage.url }
     : pageUrl
-      ? { label: cancelled ? "Prenota di nuovo" : "Vai alla pagina del ristorante", url: pageUrl }
+      ? { label: cancelled ? t.bookAgain : t.visitPage, url: `${pageUrl}?lang=${lang}` }
       : null;
   const muted = "#6f6a62";
 
   const html = `<!doctype html>
-<html lang="it">
+<html lang="${lang}">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(subject)}</title></head>
 <body style="margin:0;padding:0;background:#f6f5f2;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1d1b18">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f5f2;padding:24px 12px">
@@ -164,7 +240,7 @@ ${details
 ${
   note
     ? `<div style="margin-top:20px;background:${palette.soft};border-left:4px solid ${palette.brand};border-radius:8px;padding:14px 16px">
-<div style="font-size:13px;font-weight:600;color:${palette.strong};margin-bottom:6px">Informazioni dal ristorante</div>
+<div style="font-size:13px;font-weight:600;color:${palette.strong};margin-bottom:6px">${t.info}</div>
 <div style="font-size:14px;line-height:1.6">${paragraphs(note)}</div>
 </div>`
     : ""
@@ -172,12 +248,12 @@ ${
 </td></tr>
 <tr><td style="padding:16px 32px 28px;font-size:14px;line-height:1.6;color:${muted}">
 ${address ? `<div>${escape(address)}</div>` : ""}
-${restaurant.phone ? `<div>Tel. <a href="tel:${escape(restaurant.phone.replace(/\s/g, ""))}" style="color:${palette.strong}">${escape(restaurant.phone)}</a></div>` : ""}
+${restaurant.phone ? `<div>${t.phone} <a href="tel:${escape(restaurant.phone.replace(/\s/g, ""))}" style="color:${palette.strong}">${escape(restaurant.phone)}</a></div>` : ""}
 <div style="margin-top:8px">${escape(contact)}</div>
 ${action ? `<div style="margin-top:20px"><a href="${escape(action.url)}" style="display:inline-block;background:${palette.brand};color:${palette.contrast};text-decoration:none;font-weight:600;padding:12px 22px;border-radius:999px">${action.label}</a></div>` : ""}
 </td></tr>
 </table>
-<p style="max-width:560px;margin:16px auto 0;font-size:12px;line-height:1.5;color:${muted}">Hai ricevuto questa email perché hai prenotato da ${escape(restaurant.name)}.</p>
+<p style="max-width:560px;margin:16px auto 0;font-size:12px;line-height:1.5;color:${muted}">${escape(t.why(restaurant.name))}</p>
 </td></tr>
 </table>
 </body>
@@ -190,10 +266,10 @@ ${action ? `<div style="margin-top:20px"><a href="${escape(action.url)}" style="
     intro,
     "",
     ...details.map(([label, value]) => `${label}: ${value}`),
-    ...(note ? ["", "Informazioni dal ristorante:", note] : []),
+    ...(note ? ["", `${t.info}:`, note] : []),
     "",
     ...(address ? [address] : []),
-    ...(restaurant.phone ? [`Tel. ${restaurant.phone}`] : []),
+    ...(restaurant.phone ? [`${t.phone} ${restaurant.phone}`] : []),
     contact,
     ...(action ? ["", `${action.label}: ${action.url}`] : []),
   ].join("\n");

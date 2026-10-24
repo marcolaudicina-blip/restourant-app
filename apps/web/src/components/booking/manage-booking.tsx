@@ -8,7 +8,6 @@ import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { brandStyle } from "@/lib/brand";
 import { cn } from "@/lib/cn";
-import { formatDateLong } from "@/lib/labels";
 import type { GuestBookingView, PublicAvailability, PublicDay } from "@/lib/types";
 import { Spinner } from "../ui/spinner";
 import {
@@ -16,23 +15,36 @@ import {
   DayPicker,
   MAX_CHIPS,
   Notice,
-  people,
   PhoneLink,
   Step,
   StepperButton,
   TimePicker,
 } from "./booking-flow";
-import { Footer, Logo } from "./booking-page";
+import { Footer, LanguageSwitch, Logo } from "./booking-page";
+import { useGuestText, type GuestText } from "./i18n";
 
-const STATUS: Record<ReservationStatus, { label: string; className: string }> = {
-  confirmed: { label: "Confermata", className: "bg-[var(--brand-soft)] text-[var(--brand-strong)]" },
-  requested: { label: "In attesa di conferma", className: "bg-amber-100 text-amber-800" },
-  cancelled: { label: "Cancellata", className: "bg-red-100 text-red-700" },
-  arrived: { label: "In corso", className: "bg-canvas text-muted" },
-  seated: { label: "In corso", className: "bg-canvas text-muted" },
-  completed: { label: "Conclusa", className: "bg-canvas text-muted" },
-  no_show: { label: "Conclusa", className: "bg-canvas text-muted" },
+const STATUS_STYLE: Record<ReservationStatus, string> = {
+  confirmed: "bg-[var(--brand-soft)] text-[var(--brand-strong)]",
+  requested: "bg-amber-100 text-amber-800",
+  cancelled: "bg-red-100 text-red-700",
+  arrived: "bg-canvas text-muted",
+  seated: "bg-canvas text-muted",
+  completed: "bg-canvas text-muted",
+  no_show: "bg-canvas text-muted",
 };
+
+/** Why the guest can't act online, in their language (the API sends Italian text and a code). */
+function reasonText(t: GuestText, locale: string, view: GuestBookingView): string | null {
+  if (!view.message) return null;
+  if (locale !== "en") return view.message;
+  const english: Record<NonNullable<GuestBookingView["reason"]>, string> = {
+    cancelled: "This booking has been cancelled",
+    over: "This booking is in the past",
+    contact: "To change or cancel, please contact the restaurant",
+    too_late: "It can no longer be changed online: please contact the restaurant",
+  };
+  return view.reason ? english[view.reason] : t.changesByPhone;
+}
 
 const primaryButton =
   "flex h-12 items-center justify-center gap-2 rounded-xl bg-[var(--brand)] px-5 text-base font-semibold text-[var(--brand-contrast)] transition-opacity hover:opacity-90 disabled:opacity-60";
@@ -50,15 +62,9 @@ export function ManageBooking({ initial, token }: { initial: GuestBookingView; t
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const { restaurant, booking } = view;
-  const status = STATUS[booking.status];
-  const deadline = new Intl.DateTimeFormat("it-IT", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: restaurant.timezone,
-  }).format(new Date(view.deadline));
+  const { t, locale, longDate, dateTime, errorMessage } = useGuestText();
+  const deadline = dateTime(view.deadline, restaurant.timezone);
+  const message = reasonText(t, locale, view);
 
   async function cancel() {
     setBusy(true);
@@ -66,23 +72,28 @@ export function ManageBooking({ initial, token }: { initial: GuestBookingView; t
     try {
       setView(await api<GuestBookingView>(`/public/bookings/${token}/cancel`, { method: "POST" }));
       setMode("view");
-      setNotice("Prenotazione cancellata. Ti abbiamo inviato una conferma via email.");
+      setNotice(t.cancelledNotice);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Impossibile cancellare ora. Riprova tra poco.");
+      setError(errorMessage(e, t.cancelError));
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div style={brandStyle(restaurant.page.brandColor)} className="@container min-h-dvh bg-canvas">
+    <div
+      lang={locale}
+      style={brandStyle(restaurant.page.brandColor)}
+      className="@container min-h-dvh bg-canvas"
+    >
       <header className="bg-[var(--brand)] text-[var(--brand-contrast)]">
         <div className="mx-auto flex max-w-xl items-center gap-3 px-4 py-5">
           <Logo profile={restaurant} size="sm" />
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="truncate text-lg font-semibold">{restaurant.name}</p>
-            <p className="text-sm opacity-85">La tua prenotazione</p>
+            <p className="text-sm opacity-85">{t.yourBooking}</p>
           </div>
+          <LanguageSwitch dark />
         </div>
       </header>
 
@@ -98,9 +109,11 @@ export function ManageBooking({ initial, token }: { initial: GuestBookingView; t
 
         <section className="rounded-2xl border border-line bg-surface p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
-            <h1 className="text-lg font-semibold">Ciao {booking.guestName.split(/\s+/)[0]}</h1>
-            <span className={cn("rounded-full px-3 py-1 text-xs font-semibold", status.className)}>
-              {status.label}
+            <h1 className="text-lg font-semibold">{t.hello(booking.guestName.split(/\s+/)[0]!)}</h1>
+            <span
+              className={cn("rounded-full px-3 py-1 text-xs font-semibold", STATUS_STYLE[booking.status])}
+            >
+              {t.status[booking.status]}
             </span>
           </div>
           <dl
@@ -110,10 +123,10 @@ export function ManageBooking({ initial, token }: { initial: GuestBookingView; t
             )}
           >
             {[
-              ["Giorno", formatDateLong(booking.date)],
-              ["Ora", booking.time],
-              ["Persone", people(booking.partySize)],
-              ...(booking.guestNote ? [["Le tue richieste", booking.guestNote]] : []),
+              [t.day, longDate(booking.date)],
+              [t.time, booking.time],
+              [t.peopleShort, t.people(booking.partySize)],
+              ...(booking.guestNote ? [[t.yourRequests, booking.guestNote]] : []),
             ].map(([label, value]) => (
               <div key={label} className="flex justify-between gap-4 px-4 py-2.5">
                 <dt className="text-muted">{label}</dt>
@@ -122,9 +135,9 @@ export function ManageBooking({ initial, token }: { initial: GuestBookingView; t
             ))}
           </dl>
 
-          {view.message && (
+          {message && (
             <Notice className="mt-4">
-              {view.message}
+              {message}
               {restaurant.phone && booking.status !== "cancelled" && (
                 <>
                   : <PhoneLink phone={restaurant.phone} />
@@ -135,24 +148,16 @@ export function ManageBooking({ initial, token }: { initial: GuestBookingView; t
 
           {mode === "view" && (view.canModify || view.canCancel) && (
             <div className="mt-5 flex flex-col gap-3">
-              <p className="text-sm text-muted">
-                Puoi{" "}
-                {view.canModify && view.canCancel
-                  ? "modificarla o disdirla"
-                  : view.canModify
-                    ? "modificarla"
-                    : "disdirla"}{" "}
-                online fino a {deadline}.
-              </p>
+              <p className="text-sm text-muted">{t.canDo(view.canModify, view.canCancel, deadline)}</p>
               <div className="grid gap-2 @sm:grid-cols-2">
                 {view.canModify && (
                   <button type="button" className={primaryButton} onClick={() => setMode("change")}>
-                    <CalendarCheck className="h-5 w-5" /> Modifica
+                    <CalendarCheck className="h-5 w-5" /> {t.modify}
                   </button>
                 )}
                 {view.canCancel && (
                   <button type="button" className={secondaryButton} onClick={() => setMode("cancel")}>
-                    <CalendarX className="h-5 w-5" /> Disdici
+                    <CalendarX className="h-5 w-5" /> {t.cancel}
                   </button>
                 )}
               </div>
@@ -161,9 +166,7 @@ export function ManageBooking({ initial, token }: { initial: GuestBookingView; t
 
           {mode === "cancel" && (
             <div className="mt-5 flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 p-4">
-              <p className="text-sm font-medium text-red-800">
-                Vuoi davvero disdire la prenotazione? Il tavolo tornerà disponibile per altri clienti.
-              </p>
+              <p className="text-sm font-medium text-red-800">{t.cancelQuestion}</p>
               {error && <p className="text-sm text-red-700">{error}</p>}
               <div className="grid gap-2 @sm:grid-cols-2">
                 <button
@@ -172,7 +175,7 @@ export function ManageBooking({ initial, token }: { initial: GuestBookingView; t
                   onClick={cancel}
                   className="flex h-12 items-center justify-center gap-2 rounded-xl bg-red-600 px-5 font-semibold text-white hover:bg-red-700 disabled:opacity-60"
                 >
-                  {busy && <Spinner className="h-4 w-4" />} Sì, disdici
+                  {busy && <Spinner className="h-4 w-4" />} {t.yesCancel}
                 </button>
                 <button
                   type="button"
@@ -182,22 +185,22 @@ export function ManageBooking({ initial, token }: { initial: GuestBookingView; t
                     setError(null);
                   }}
                 >
-                  No, tienila
+                  {t.noKeep}
                 </button>
               </div>
             </div>
           )}
 
           {booking.status === "cancelled" && (
-            <Link href={`/prenota/${restaurant.slug}`} className={cn(primaryButton, "mt-5")}>
-              Prenota di nuovo
+            <Link href={`/prenota/${restaurant.slug}?lang=${locale}`} className={cn(primaryButton, "mt-5")}>
+              {t.bookAgainShort}
             </Link>
           )}
         </section>
 
         {mode === "change" && (
           <section className="rounded-2xl border border-line bg-surface p-5">
-            <h2 className="mb-5 text-lg font-semibold">Modifica la prenotazione</h2>
+            <h2 className="mb-5 text-lg font-semibold">{t.changeTitle}</h2>
             <ChangeForm
               view={view}
               token={token}
@@ -205,11 +208,7 @@ export function ManageBooking({ initial, token }: { initial: GuestBookingView; t
               onSaved={(next) => {
                 setView(next);
                 setMode("view");
-                setNotice(
-                  next.booking.status === "requested"
-                    ? "Modifica inviata: il ristorante deve confermarla. Ti scriveremo via email."
-                    : "Prenotazione modificata. Ti abbiamo inviato un'email con i nuovi dettagli.",
-                );
+                setNotice(next.booking.status === "requested" ? t.changeRequestedNotice : t.changedNotice);
               }}
             />
           </section>
@@ -251,6 +250,7 @@ function ChangeForm({
   const { restaurant, booking } = view;
   const rules = restaurant.booking;
   const queryClient = useQueryClient();
+  const { t, locale, longDate, errorMessage } = useGuestText();
   const chipMax = Math.min(rules.maxParty, MAX_CHIPS);
   const [party, setParty] = useState(booking.partySize);
   const [date, setDate] = useState(booking.date);
@@ -284,7 +284,7 @@ function ChangeForm({
       onSaved(
         await api<GuestBookingView>(`/public/bookings/${token}/change`, {
           method: "POST",
-          body: { date, time, partySize: party },
+          body: { date, time, partySize: party, locale },
         }),
       );
     } catch (e) {
@@ -292,7 +292,7 @@ function ChangeForm({
         setTime(null);
         await queryClient.invalidateQueries({ queryKey: ["guest-booking", token, "availability"] });
       }
-      setError(e instanceof ApiError ? e.message : "Impossibile salvare ora. Riprova tra poco.");
+      setError(errorMessage(e, t.saveError));
     } finally {
       setBusy(false);
     }
@@ -302,7 +302,7 @@ function ChangeForm({
 
   return (
     <div className="flex flex-col gap-6">
-      <Step icon={<Users className="h-4 w-4" />} title="Quante persone?">
+      <Step icon={<Users className="h-4 w-4" />} title={t.howMany}>
         <div className="flex flex-wrap gap-2">
           {Array.from({ length: chipMax - rules.minParty + 1 }, (_, i) => rules.minParty + i).map((n) => (
             <Chip key={n} selected={party === n} onClick={() => choose({ party: n })} className="w-11">
@@ -313,15 +313,15 @@ function ChangeForm({
         {rules.maxParty > chipMax && (
           <div className="mt-3 flex items-center gap-3">
             <StepperButton
-              label="Una persona in meno"
+              label={t.onePersonLess}
               disabled={party <= rules.minParty}
               onClick={() => choose({ party: party - 1 })}
             >
               <Minus className="h-4 w-4" />
             </StepperButton>
-            <span className="min-w-24 text-center text-lg font-semibold tabular-nums">{people(party)}</span>
+            <span className="min-w-24 text-center text-lg font-semibold tabular-nums">{t.people(party)}</span>
             <StepperButton
-              label="Una persona in più"
+              label={t.onePersonMore}
               disabled={party >= rules.maxParty}
               onClick={() => choose({ party: party + 1 })}
             >
@@ -329,10 +329,10 @@ function ChangeForm({
             </StepperButton>
           </div>
         )}
-        <p className="mt-2 text-xs text-muted">Per più di {rules.maxParty} persone contatta il ristorante.</p>
+        <p className="mt-2 text-xs text-muted">{t.largerCall(rules.maxParty)}</p>
       </Step>
 
-      <Step icon={<CalendarCheck className="h-4 w-4" />} title="Quando?">
+      <Step icon={<CalendarCheck className="h-4 w-4" />} title={t.when}>
         {days.isPending ? (
           <Spinner className="h-5 w-5 text-muted" />
         ) : (
@@ -345,15 +345,11 @@ function ChangeForm({
         )}
       </Step>
 
-      <Step icon={<Clock className="h-4 w-4" />} title="A che ora?">
+      <Step icon={<Clock className="h-4 w-4" />} title={t.whatTime}>
         {availability.isPending ? (
           <Spinner className="h-5 w-5 text-muted" />
         ) : availability.isError ? (
-          <Notice>
-            {availability.error instanceof ApiError
-              ? availability.error.message
-              : "Impossibile caricare gli orari. Riprova tra poco."}
-          </Notice>
+          <Notice>{errorMessage(availability.error, t.timesError)}</Notice>
         ) : (
           <TimePicker availability={availability.data!} selected={time} onSelect={setTime} />
         )}
@@ -364,10 +360,10 @@ function ChangeForm({
       <div className="grid gap-2 border-t border-line pt-5 @sm:grid-cols-2">
         <button type="button" disabled={!time || unchanged || busy} onClick={save} className={primaryButton}>
           {busy && <Spinner className="h-4 w-4" />}
-          {time ? `Conferma: ${formatDateLong(date)}, ${time}` : "Scegli un orario"}
+          {time ? t.confirmChange(`${longDate(date)}, ${time}`) : t.chooseTime}
         </button>
         <button type="button" className={secondaryButton} onClick={onCancel}>
-          Annulla
+          {t.back}
         </button>
       </div>
     </div>

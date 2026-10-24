@@ -321,6 +321,8 @@ export async function insertReservation(
     seating: Pick<Seating, "tableIds" | "durationMinutes">;
     status: ReservationStatus;
     channel: ReservationChannel;
+    /** The guest's language (online bookings); staff bookings default to Italian. */
+    locale?: "it" | "en";
     input: Pick<
       ReservationCreateInput,
       | "date"
@@ -359,6 +361,7 @@ export async function insertReservation(
         partySize: input.partySize,
         status,
         channel: args.channel,
+        locale: args.locale ?? "it",
         guestName: input.guestName,
         guestPhone: input.guestPhone ?? null,
         guestEmail: input.guestEmail ?? null,
@@ -407,6 +410,7 @@ export async function createReservation(
     seating,
     status,
     channel,
+    locale: input.locale,
     input,
     audit: { ...input, tableIds: seating.tableIds, assignedBy: seating.option ? "system" : "staff" },
   });
@@ -548,6 +552,7 @@ export async function rescheduleReservation(
     partySize: number;
     seating: Pick<Seating, "tableIds" | "durationMinutes">;
     status: ReservationStatus;
+    locale?: "it" | "en";
     audit: Record<string, unknown>;
   },
 ): Promise<boolean> {
@@ -564,6 +569,7 @@ export async function rescheduleReservation(
           durationMinutes: args.seating.durationMinutes,
           partySize: args.partySize,
           status: args.status,
+          ...(args.locale ? { locale: args.locale } : {}),
           reminderSentAt: null,
         })
         .where(and(eq(reservations.id, id), eq(reservations.restaurantId, ctx.restaurantId)))

@@ -15,7 +15,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { primaryId, timestamps } from "./columns.js";
-import { reservationChannelEnum, reservationStatusEnum } from "./enums.js";
+import { localeEnum, reservationChannelEnum, reservationStatusEnum } from "./enums.js";
 import { diningTables, rooms } from "./floor.js";
 import { guests } from "./guests.js";
 import { users } from "./identity.js";
@@ -57,6 +57,8 @@ export const reservations = pgTable(
     seatedAt: timestamp({ withTimezone: true }),
     completedAt: timestamp({ withTimezone: true }),
     cancelledAt: timestamp({ withTimezone: true }),
+    /** The guest's language, for the emails they get. */
+    locale: localeEnum().notNull().default("it"),
     /** When the day-before reminder went out; it is sent once. */
     reminderSentAt: timestamp({ withTimezone: true }),
     ...timestamps,

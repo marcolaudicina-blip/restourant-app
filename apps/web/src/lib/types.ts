@@ -95,6 +95,7 @@ export type Reservation = {
   guestName: string;
   guestPhone: string | null;
   guestEmail: string | null;
+  locale: "it" | "en";
   guestNote: string | null;
   internalNote: string | null;
   requestedRoomId: string | null;
@@ -207,6 +208,7 @@ export type GuestBookingView = {
     guestName: string;
     guestNote: string | null;
     status: ReservationStatus;
+    locale: "it" | "en";
   };
   canCancel: boolean;
   canModify: boolean;
@@ -214,6 +216,7 @@ export type GuestBookingView = {
   deadline: string;
   /** Why nothing can be done online, when that is the case. */
   message: string | null;
+  reason: "cancelled" | "over" | "contact" | "too_late" | null;
 };
 
 // Team -----------------------------------------------------------------------------------------

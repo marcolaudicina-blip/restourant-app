@@ -267,7 +267,7 @@ export async function createOnlineReservation(
     status = confirmationStatus(floor, input.partySize);
   }
 
-  const { website: _website, privacyAccepted: _privacy, ...details } = input;
+  const { website: _website, privacyAccepted: _privacy, locale, ...details } = input;
   const reservation = { ...details, guestPhone: phone, guestEmail: email };
   let id: string;
   try {
@@ -277,6 +277,7 @@ export async function createOnlineReservation(
       seating,
       status,
       channel: "online",
+      locale,
       input: reservation,
       audit: { ...reservation, tableIds: seating.tableIds, privacyAcceptedAt: now.toISOString() },
     });

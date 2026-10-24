@@ -111,6 +111,11 @@ pnpm db:migrate      # applies migrations to $DATABASE_URL
   bookings and exposes the requests waiting for confirmation (no websockets: serverless-friendly).
 - `/api/session` opens every session (login, register, accept-invitation, reset-password,
   change-password) so the token only lives in the httpOnly cookie.
+- Guest-facing pages (`/prenota`, `/prenotazione`) are Italian and English: texts in
+  `components/booking/i18n.tsx` (`useGuestText`), language from `?lang=`, the booking, or
+  Accept-Language (`lib/guest-locale.ts`). The language is stored in `reservations.locale` and
+  booking emails follow it (`TEXT` in booking-email.template.ts). API messages stay Italian; the
+  page maps error codes and reasons to English.
 - `/prenota/[slug]` is the public booking page (`components/booking`), open to everyone and the only
   route that may be framed (`?embed=1`). It lays out with container queries (`@3xl:`), so the
   settings preview can render it at phone width. Pictures go through `/api/media/[id]`
