@@ -502,6 +502,24 @@ export async function setReservationStatus(
     throw conflict("invalid_transition", `Non si può passare da "${current.status}" a "${status}"`);
   }
 
+  if (!isBlockingStatus(current.status) && isBlockingStatus(status)) {
+    // Reinstated: its tables must not have been blocked in the meantime (other bookings are
+    // caught by the exclusion constraint).
+    const floor = await loadFloorContext(ctx, current.date, { excludeReservationId: id });
+    const start = floor.toMinutes(current.startsAt);
+    const end = floor.toMinutes(current.endsAt);
+    const held = (
+      await ctx.db
+        .select({ tableId: reservationTables.tableId })
+        .from(reservationTables)
+        .where(eq(reservationTables.reservationId, id))
+    ).map((r) => r.tableId);
+    const blocked = floor.busy.some(
+      (b) => b.blockId && !b.onlineOnly && held.includes(b.tableId) && b.start < end && start < b.end,
+    );
+    if (blocked) throw conflict("table_blocked", "Il tavolo è bloccato in quell'orario: scegline un altro");
+  }
+
   const now = new Date();
   const timestamps: Partial<ReservationRow> = {
     seatedAt: status === "seated" ? (current.seatedAt ?? now) : current.seatedAt,

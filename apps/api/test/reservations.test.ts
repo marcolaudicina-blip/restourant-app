@@ -217,6 +217,47 @@ describe("editing", () => {
     expect(same.status).toBe(200);
   });
 
+  it("leaves tables of a room the new service doesn't use", async () => {
+    // Lunch only in the Sala.
+    await owner.api.post(`${owner.base}/services`, {
+      name: "Pranzo",
+      daysOfWeek: [2, 3, 4, 5, 6, 7],
+      firstArrival: "12:00",
+      lastArrival: "14:00",
+      roomIds: [room.id],
+    });
+    const res = await book({ time: "20:00", tableIds: [t.D1!.id] });
+    const lunch = await owner.api.patch(`${owner.base}/reservations/${res.body.data.id}`, { time: "13:00" });
+    expect(lunch.status).toBe(200);
+    expect(["T1", "T2", "T3"]).toContain(tablesOf(lunch));
+  });
+
+  it("lets staff use a table closed only to online bookings, but not reinstate on a blocked one", async () => {
+    // Online-only block: staff can still seat people there.
+    await owner.api.post(`${owner.base}/table-blocks`, {
+      tableId: t.T2!.id,
+      startsAt: "2026-10-24T17:00:00Z",
+      endsAt: "2026-10-24T21:00:00Z",
+      onlineOnly: true,
+    });
+    const onT2 = await book({ time: "20:00", tableIds: [t.T2!.id] });
+    expect(onT2.status).toBe(201);
+
+    // A cancelled booking can't come back on a table blocked since.
+    const res = await book({ time: "20:00", tableIds: [t.T3!.id] });
+    await owner.api.post(`${owner.base}/reservations/${res.body.data.id}/status`, { status: "cancelled" });
+    await owner.api.post(`${owner.base}/table-blocks`, {
+      tableId: t.T3!.id,
+      startsAt: "2026-10-24T17:00:00Z",
+      endsAt: "2026-10-24T21:00:00Z",
+    });
+    const back = await owner.api.post(`${owner.base}/reservations/${res.body.data.id}/status`, {
+      status: "confirmed",
+    });
+    expect(back.status).toBe(409);
+    expect(back.body.error.code).toBe("table_blocked");
+  });
+
   it("moves to a free table when the current one is blocked at the new time", async () => {
     const res = await book({ time: "19:00", tableIds: [t.T3!.id] });
     await owner.api.post(`${owner.base}/table-blocks`, {

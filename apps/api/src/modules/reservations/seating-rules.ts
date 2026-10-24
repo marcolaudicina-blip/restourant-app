@@ -96,7 +96,10 @@ export function checkChosenTables(
   }
 
   const end = start + durationMinutes;
-  const clashes = floor.busy.filter((b) => tableIds.includes(b.tableId) && b.start < end && start < b.end);
+  // Blocks that only close a table to online bookings don't stop staff.
+  const clashes = floor.busy.filter(
+    (b) => !b.onlineOnly && tableIds.includes(b.tableId) && b.start < end && start < b.end,
+  );
   const names = (ids: string[]) =>
     [...new Set(ids)].map((id) => tables.find((t) => t.id === id)!.name).join(", ");
   const blocked = clashes.filter((c) => c.blockId);
@@ -174,6 +177,8 @@ export function reseat(
       (o) =>
         o.tableIds.every((id) => current.includes(id)) && (!smaller || o.tableIds.length < current.length),
     );
+    // Fewer people: keep as few of the current tables as possible (a combination too gives way).
+    if (smaller) options.sort((a, b) => a.tableIds.length - b.tableIds.length);
     const free = findFreeOption(options, args.start, durationFor, indexBusy(floor.busy, "staff"));
     return free
       ? { tableIds: free.option.tableIds, durationMinutes: free.durationMinutes, option: free.option }
@@ -183,6 +188,13 @@ export function reseat(
     const smaller = own(true);
     if (smaller) return smaller;
   }
+  // Tables in a room the service at the new time doesn't use (another day, another service): new ones.
+  const rooms = args.service?.roomIds ?? [];
+  const inRooms = current.every((id) => {
+    const roomId = floor.tables.find((t) => t.id === id)?.roomId;
+    return rooms.length === 0 || (roomId !== undefined && rooms.includes(roomId));
+  });
+  if (!inRooms) return seat(floor, args);
   try {
     return seat(floor, { ...args, tableIds: current });
   } catch (error) {

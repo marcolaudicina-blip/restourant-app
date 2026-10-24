@@ -78,6 +78,8 @@ function staffChangeKind(before: Reservation | null, after: Reservation): Bookin
   if (!before) return after.status === "confirmed" ? "confirmed" : null;
   if (after.status === "cancelled") return active(before) ? "cancelled" : null;
   if (before.status === "requested" && after.status === "confirmed") return "confirmed";
+  // A cancelled booking put back: the guest was told it was cancelled, now it is on again.
+  if (!active(before) && before.status === "cancelled" && active(after)) return "confirmed";
   const moved =
     before.date !== after.date || before.time !== after.time || before.partySize !== after.partySize;
   return active(after) && moved ? "updated" : null;

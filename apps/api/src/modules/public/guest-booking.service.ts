@@ -172,7 +172,8 @@ export async function changeGuestBooking(
 
   const service = floor.serviceById(match.serviceId)!;
   const start = timeToMinutes(input.time);
-  const seating = keepTables(floor, service, input.partySize, start, reservation.tableIds) ?? {
+  const fewer = input.partySize < reservation.partySize;
+  const seating = keepTables(floor, service, input.partySize, start, reservation.tableIds, fewer) ?? {
     tableIds: match.slot.option!.tableIds,
     durationMinutes: match.slot.durationMinutes!,
   };
@@ -219,6 +220,8 @@ function keepTables(
   partySize: number,
   start: number,
   current: string[],
+  /** Fewer people: keep as few of the current tables as possible. */
+  fewer: boolean,
 ) {
   if (current.length === 0) return null;
   // The tables are already the guest's (maybe chosen by staff): any of them that still suits the
@@ -226,6 +229,7 @@ function keepTables(
   const own = seatingOptions(floor, service, partySize, "staff").filter((option) =>
     option.tableIds.every((id) => current.includes(id)),
   );
+  if (fewer) own.sort((a, b) => a.tableIds.length - b.tableIds.length);
   const free = findFreeOption(
     own,
     start,
