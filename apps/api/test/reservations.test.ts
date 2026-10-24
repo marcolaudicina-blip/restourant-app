@@ -186,7 +186,7 @@ describe("editing", () => {
     expect(tablesOf(later)).toBe("T1");
   });
 
-  it("refuses a time that clashes, unless asked to reassign", async () => {
+  it("moves to free tables when the current ones are taken at the new time", async () => {
     const early = await book({ time: "19:00", tableIds: [t.T3!.id] });
     await book({ time: "21:00" }); // T1
     const clash = await owner.api.patch(`${owner.base}/reservations/${early.body.data.id}`, {
@@ -196,15 +196,31 @@ describe("editing", () => {
     expect(clash.status).toBe(200); // T3 is still free at 20:00
     const res = await book({ time: "22:00", tableIds: [t.T3!.id] });
     expect(res.status).toBe(201);
+    // Exactly these tables, or nothing.
     const blocked = await owner.api.patch(`${owner.base}/reservations/${early.body.data.id}`, {
       time: "21:00",
+      reassignTables: false,
     });
     expect(blocked.body.error.code).toBe("table_taken");
-    const reassigned = await owner.api.patch(`${owner.base}/reservations/${early.body.data.id}`, {
+    // By default the booking moves to a free table on its own.
+    const moved = await owner.api.patch(`${owner.base}/reservations/${early.body.data.id}`, {
       time: "21:00",
-      reassignTables: true,
     });
-    expect(tablesOf(reassigned)).toBe("T2");
+    expect(tablesOf(moved)).toBe("T2");
+  });
+
+  it("follows the party size: bigger tables when more people come, joined ones freed when fewer", async () => {
+    const res = await book({ partySize: 2 });
+    expect(tablesOf(res)).toBe("T1");
+    const grown = await owner.api.patch(`${owner.base}/reservations/${res.body.data.id}`, { partySize: 6 });
+    expect(grown.status).toBe(200);
+    expect(tablesOf(grown)).toBe("T2+T3");
+    const smaller = await owner.api.patch(`${owner.base}/reservations/${res.body.data.id}`, { partySize: 3 });
+    expect(tablesOf(smaller).split("+")).toHaveLength(1);
+    expect(["T2", "T3"]).toContain(tablesOf(smaller));
+    // Same people at another time: the table stays.
+    const later = await owner.api.patch(`${owner.base}/reservations/${res.body.data.id}`, { time: "21:30" });
+    expect(tablesOf(later)).toBe(tablesOf(smaller));
   });
 
   it("recomputes the duration when the party grows", async () => {

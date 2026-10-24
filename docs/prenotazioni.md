@@ -42,6 +42,12 @@ Lo staff può sempre indicare i tavoli. Il sistema controlla che:
 Da una prenotazione esistente si può **spostare** il gruppo su altri tavoli o **unire** altri tavoli
 (`PUT /reservations/:id/tables`).
 
+**Cambiare orario o persone sposta i tavoli da solo**: se i tavoli attuali vanno ancora bene restano;
+con meno persone si libera il tavolo unito che non serve più; se non bastano o sono occupati al nuovo
+orario il sistema sceglie il miglior tavolo libero, anche in un'altra sala, e lo dice nel messaggio
+("ora al tavolo D1"). Solo se non c'è nulla di libero compare l'avviso, e si può forzare il tavolo
+attuale. Lo stesso vale quando il cliente modifica dal link nell'email.
+
 ## Niente doppie prenotazioni
 
 Oltre ai controlli dell'applicazione, il database rifiuta due prenotazioni attive sovrapposte sullo

@@ -104,7 +104,11 @@ export const reservationUpdate = z.object({
   time: timeString.optional(),
   partySize: partySize.optional(),
   durationMinutes: z.number().int().min(15).max(600).optional(),
-  /** When date/time/size change and the current tables no longer work, pick new ones automatically. */
+  /**
+   * Tables when date, time or size change. Omitted: keep the current ones while they work (fewer
+   * people free joined tables), otherwise pick free ones automatically. true: always pick anew.
+   * false: keep exactly the current tables or fail.
+   */
   reassignTables: z.boolean().optional(),
   ignorePacing: z.boolean().optional(),
   ignoreCapacity: z.boolean().optional(),

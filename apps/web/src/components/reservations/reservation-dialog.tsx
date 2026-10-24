@@ -36,7 +36,6 @@ const OVERRIDES: Record<
   pacing_bookings: { flag: "ignorePacing", label: "Prenota comunque" },
   service_full: { flag: "ignorePacing", label: "Prenota comunque" },
   capacity_mismatch: { flag: "ignoreCapacity", label: "Usa comunque questi tavoli" },
-  table_taken: { flag: "reassignTables", label: "Scegli altri tavoli in automatico" },
 };
 
 function nowRounded(timezone: string): string {
@@ -146,11 +145,18 @@ export function ReservationDialog({
         const tablesChanged =
           manualTables !== null &&
           manualTables.slice().sort().join() !== editing.tableIds.slice().sort().join();
-        await save.mutateAsync({ date, time, partySize, ...guest, ...overrides });
+        const saved = await save.mutateAsync({ date, time, partySize, ...guest, ...overrides });
         if (tablesChanged) {
           await saveTables.mutateAsync({ tableIds: manualTables!, ignoreCapacity: overrides.ignoreCapacity });
         }
-        toast.success("Prenotazione aggiornata");
+        // Tables follow a new time or party size on their own: say where the booking went.
+        const moved =
+          !tablesChanged && saved.tableIds.slice().sort().join() !== editing.tableIds.slice().sort().join();
+        toast.success(
+          moved && saved.tables.length
+            ? `Prenotazione aggiornata: ora al tavolo ${saved.tables.map((t) => t.name).join("+")}`
+            : "Prenotazione aggiornata",
+        );
       } else {
         await save.mutateAsync({
           date,

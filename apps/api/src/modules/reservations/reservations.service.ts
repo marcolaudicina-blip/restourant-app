@@ -292,6 +292,50 @@ function seat(
   return { tableIds: free.option.tableIds, durationMinutes: free.durationMinutes, option: free.option };
 }
 
+/**
+ * New time or party size for a booking that has tables: the same tables when they still work;
+ * otherwise part of them (fewer people free the joined ones), otherwise the best free tables,
+ * also in another room. Only when nothing is free does staff get the original warning (and may
+ * force the current tables).
+ */
+function reseat(
+  floor: FloorContext,
+  args: Omit<Parameters<typeof seat>[1], "tableIds">,
+  current: string[],
+  /** Fewer people than before: joined tables no longer needed are freed. */
+  fewer: boolean,
+): Seating {
+  const durationFor = (roomId: string | null) =>
+    args.durationMinutes ?? floor.durationFor(args.partySize, args.service?.id ?? null)(roomId);
+  const own = (smaller: boolean) => {
+    const options = seatingOptions(floor, args.service, args.partySize, "staff").filter(
+      (o) =>
+        o.tableIds.every((id) => current.includes(id)) && (!smaller || o.tableIds.length < current.length),
+    );
+    const free = findFreeOption(options, args.start, durationFor, indexBusy(floor.busy, "staff"));
+    return free
+      ? { tableIds: free.option.tableIds, durationMinutes: free.durationMinutes, option: free.option }
+      : null;
+  };
+  if (fewer && current.length > 1) {
+    const smaller = own(true);
+    if (smaller) return smaller;
+  }
+  try {
+    return seat(floor, { ...args, tableIds: current });
+  } catch (error) {
+    if (!(error instanceof AppError) || !["capacity_mismatch", "table_taken"].includes(error.code))
+      throw error;
+    const kept = own(false);
+    if (kept) return kept;
+    try {
+      return seat(floor, args);
+    } catch {
+      throw error;
+    }
+  }
+}
+
 async function writeTables(ctx: TenantContext, reservation: ReservationRow, tableIds: string[]) {
   await ctx.db.delete(reservationTables).where(eq(reservationTables.reservationId, reservation.id));
   // Group requests from the booking page can wait for staff to pick the tables.
@@ -456,15 +500,21 @@ export async function updateReservation(
         .where(eq(reservationTables.reservationId, id))
     ).map((r) => r.tableId);
     const keepDuration = !resized && fields.durationMinutes === undefined;
-    const seating = seat(floor, {
+    const seatArgs = {
       service,
       start,
       partySize,
-      tableIds: reassignTables ? undefined : currentTableIds,
       durationMinutes: fields.durationMinutes ?? (keepDuration ? current.durationMinutes : undefined),
       roomId: current.requestedRoomId,
       ignoreCapacity: ignoreCapacity ?? false,
-    });
+    };
+    const seating =
+      reassignTables !== undefined ||
+      currentTableIds.length === 0 ||
+      !isBlockingStatus(current.status) ||
+      ignoreCapacity
+        ? seat(floor, { ...seatArgs, tableIds: reassignTables ? undefined : currentTableIds })
+        : reseat(floor, seatArgs, currentTableIds, partySize < current.partySize);
 
     tableIds = seating.tableIds;
     previousTableIds = currentTableIds;
