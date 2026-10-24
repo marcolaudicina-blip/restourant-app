@@ -435,6 +435,7 @@ export async function updateReservation(
 
   let schedule: Partial<ReservationRow> = {};
   let tableIds: string[] | null = null;
+  let previousTableIds: string[] = [];
 
   if (rescheduled) {
     const floor = await loadFloorContext(ctx, date, { excludeReservationId: id });
@@ -466,6 +467,7 @@ export async function updateReservation(
     });
 
     tableIds = seating.tableIds;
+    previousTableIds = currentTableIds;
     schedule = {
       serviceId: service?.id ?? null,
       date,
@@ -500,10 +502,39 @@ export async function updateReservation(
       entity: "reservation",
       entityId: id,
       action: "update",
-      changes: { ...fields, ...(tableIds ? { tableIds } : {}) },
+      changes: {
+        ...fields,
+        ...(tableIds ? { tableIds } : {}),
+        // What it was before, for the booking's history.
+        from: previousValues(current, fields, tableIds ? previousTableIds : null),
+      },
     });
   });
   return getReservation(ctx, id);
+}
+
+/** The stored values of the fields a patch changes (and the tables, when they move). */
+function previousValues(
+  current: ReservationRow,
+  fields: Partial<ReservationUpdate>,
+  tableIds: string[] | null,
+): Record<string, unknown> {
+  const stored: Record<string, unknown> = {
+    date: current.date,
+    time: normalizeTime(current.startTime),
+    partySize: current.partySize,
+    durationMinutes: current.durationMinutes,
+    guestName: current.guestName,
+    guestPhone: current.guestPhone,
+    guestEmail: current.guestEmail,
+    guestNote: current.guestNote,
+    internalNote: current.internalNote,
+    locale: current.locale,
+  };
+  const from: Record<string, unknown> = {};
+  for (const key of Object.keys(fields)) if (key in stored) from[key] = stored[key];
+  if (tableIds) from.tableIds = tableIds;
+  return from;
 }
 
 /** Moves a reservation to other tables, or joins extra tables to it. */
@@ -524,6 +555,12 @@ export async function setReservationTables(
       input.ignoreCapacity ?? false,
     );
   }
+  const before = (
+    await ctx.db
+      .select({ tableId: reservationTables.tableId })
+      .from(reservationTables)
+      .where(eq(reservationTables.reservationId, id))
+  ).map((r) => r.tableId);
   await inTransaction(ctx, async (tx) => {
     await writeTables(tx, current, input.tableIds);
     // Moving tables is a change other devices must pick up (see getActivity).
@@ -532,7 +569,7 @@ export async function setReservationTables(
       entity: "reservation",
       entityId: id,
       action: "update",
-      changes: { tableIds: input.tableIds },
+      changes: { tableIds: input.tableIds, from: { tableIds: before } },
     });
   });
   return getReservation(ctx, id);

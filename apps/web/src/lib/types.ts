@@ -253,6 +253,13 @@ export type ReviewSummary = {
   }[];
 };
 
+export type ReservationHistoryEntry = {
+  at: string;
+  actor: { kind: "staff" | "guest" | "system"; name: string };
+  title: string;
+  lines: string[];
+};
+
 export type PublicBooking = {
   id: string;
   status: "confirmed" | "requested";

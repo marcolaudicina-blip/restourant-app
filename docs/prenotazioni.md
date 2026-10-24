@@ -124,3 +124,12 @@ giorno e il filtro "Solo online"; aprendo una prenotazione si vede da dove è ar
 
 Tavoli, sale e servizi con prenotazioni collegate non si possono eliminare (`in_use`): si
 disattivano, così lo storico resta intatto. Ogni operazione finisce nello storico modifiche.
+
+## Storico della prenotazione
+
+Aprendo una prenotazione, in fondo c'è **Storico delle modifiche**: chi l'ha creata (staff, cliente
+dal sito), ogni cambio di giorno, ora, persone, tavolo (con la sala, es. "T1 (Sala) → D1 (Dehors)"),
+stato e dati del cliente, le email inviate e il giudizio del cliente, ognuno con chi l'ha fatto
+(nome dello staff, "Cliente" o "Sistema") e quando. Viene dal registro modifiche
+(`GET /restaurants/:id/reservations/:id/history`); per le modifiche fatte prima di questa versione
+manca il valore precedente.

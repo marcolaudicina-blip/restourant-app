@@ -15,6 +15,7 @@ import { emailAfterStaffChange } from "../notifications/booking-email.service.js
 import { waitlistAfterStaffChange } from "../waitlist/waitlist.service.js";
 import { getActivity } from "./activity.service.js";
 import { getAvailability } from "./availability.service.js";
+import { getReservationHistory } from "./history.service.js";
 import {
   createReservation,
   getReservation,
@@ -84,6 +85,11 @@ export const reservationRoutes: FastifyPluginAsyncZod = async (app) => {
 
   app.get("/reservations/:id", { schema: { params: idParams }, config: READ }, async (request) => ({
     data: await getReservation(tenant(request), request.params.id),
+  }));
+
+  /** Who did what to this booking, in order. */
+  app.get("/reservations/:id/history", { schema: { params: idParams }, config: READ }, async (request) => ({
+    data: await getReservationHistory(tenant(request), request.params.id),
   }));
 
   app.patch(

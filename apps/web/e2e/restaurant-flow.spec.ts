@@ -134,6 +134,16 @@ test("from sign-up to a full service", async ({ page, browser }, testInfo) => {
   await page.getByRole("button", { name: "Lista", exact: true }).click();
   await expect(page.getByRole("listitem").filter({ hasText: "Bianchi" })).toContainText("21:00");
 
+  // Every change is in the booking's history, with who made it.
+  await page.getByRole("listitem").filter({ hasText: "Bianchi" }).getByRole("button").first().click();
+  const editDialog = page.getByRole("dialog", { name: /^Modifica: Bianchi/ });
+  await editDialog.getByRole("button", { name: "Storico delle modifiche" }).click();
+  await expect(editDialog.getByText("Prenotazione creata dallo staff")).toBeVisible();
+  await expect(editDialog.getByText("Ora: 20:00 → 21:00")).toBeVisible();
+  await expect(editDialog.getByText(/· Marco ·/).first()).toBeVisible();
+  await shot("03c-storico");
+  await editDialog.getByRole("button", { name: "Annulla" }).click();
+
   // Staff bookings carry no channel mark; the "online only" filter is empty until guests book online.
   await expect(page.getByRole("listitem").filter({ hasText: "Rossi" })).not.toContainText("Online");
   await page.getByRole("button", { name: "Solo online" }).click();

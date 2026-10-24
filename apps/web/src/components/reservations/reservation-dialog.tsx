@@ -16,6 +16,7 @@ import { Dialog } from "../ui/dialog";
 import { Field, Input, Select, Textarea } from "../ui/field";
 import { useToast } from "../ui/toast";
 import { ChannelBadge } from "./channel-badge";
+import { ReservationHistory } from "./reservation-history";
 import type { WaitlistBooking } from "./waitlist-panel";
 
 type Mode =
@@ -427,6 +428,8 @@ export function ReservationDialog({
             {(id) => <Textarea id={id} name="internalNote" defaultValue={editing?.internalNote ?? ""} />}
           </Field>
         </div>
+
+        {editing && <ReservationHistory id={editing.id} />}
 
         <div className="flex flex-col gap-3 md:col-span-2">
           {warning && override && (
