@@ -10,16 +10,7 @@ import { brandStyle } from "@/lib/brand";
 import { cn } from "@/lib/cn";
 import type { GuestBookingView, PublicAvailability, PublicDay } from "@/lib/types";
 import { Spinner } from "../ui/spinner";
-import {
-  Chip,
-  DayPicker,
-  MAX_CHIPS,
-  Notice,
-  PhoneLink,
-  Step,
-  StepperButton,
-  TimePicker,
-} from "./booking-flow";
+import { Chip, DayPicker, MAX_CHIPS, Notice, PhoneLink, Step, StepperButton, TimePicker } from "./pickers";
 import { Footer, LanguageSwitch, Logo } from "./booking-page";
 import { useGuestText, type GuestText } from "./i18n";
 

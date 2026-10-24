@@ -46,10 +46,10 @@ const EMPTY_STATS: GuestStats = {
   nextBooking: null,
 };
 
-const visited = sql`(${reservations.status} in ('arrived', 'seated', 'completed') or (${reservations.status} = 'confirmed' and ${reservations.endsAt} < now()))`;
-const upcoming = sql`(${reservations.status} in ('requested', 'confirmed') and ${reservations.startsAt} >= now())`;
-
 function statsQuery(ctx: TenantContext) {
+  const now = (ctx.now ?? new Date()).toISOString();
+  const visited = sql`(${reservations.status} in ('arrived', 'seated', 'completed') or (${reservations.status} = 'confirmed' and ${reservations.endsAt} < ${now}::timestamptz))`;
+  const upcoming = sql`(${reservations.status} in ('requested', 'confirmed') and ${reservations.startsAt} >= ${now}::timestamptz)`;
   return ctx.db
     .select({
       guestId: reservations.guestId,

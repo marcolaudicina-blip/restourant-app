@@ -7,6 +7,8 @@ export type TenantContext = {
   db: Executor;
   restaurantId: string;
   actorUserId: string | null;
+  /** The app's clock (frozen in tests); falls back to the real time where it isn't set. */
+  now?: Date;
 };
 
 export function tenant(request: FastifyRequest): TenantContext {
@@ -15,6 +17,7 @@ export function tenant(request: FastifyRequest): TenantContext {
     db: request.server.deps.db,
     restaurantId: request.membership.restaurantId,
     actorUserId: request.auth.userId,
+    now: request.server.deps.now(),
   };
 }
 
