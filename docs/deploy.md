@@ -65,3 +65,11 @@ dalle migrazioni. Le migrazioni girano a ogni build.
 `apps/api` si avvia con `pnpm db:migrate && node apps/api/dist/server.js` (Railway, Docker…).
 Variabili: `DATABASE_URL`, `JWT_SECRET`, `TRUST_PROXY=true`, `CORS_ORIGINS`. Sul gestionale si imposta
 `API_URL` con l'indirizzo dell'API.
+
+### Sito vetrina
+
+`/sito` è il sito di presentazione (prezzi e contatti in `apps/web/src/lib/site.ts`, schermate in
+`apps/web/public/sito/`). Con la variabile `SITE_HOSTS` (es.
+`twentyreserve.com,www.twentyreserve.com,twentyreserve.it,www.twentyreserve.it`) quei domini mostrano
+il sito in home e mandano ogni altro indirizzo all'app (`APP_URL`). Su Vercel i domini vanno lasciati
+collegati al progetto **senza** rimando verso app.twentyreserve.com.
