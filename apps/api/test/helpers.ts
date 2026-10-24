@@ -111,7 +111,11 @@ export async function addMember(ctx: TestContext, restaurantId: string, role: Ro
   counter += 1;
   const [user] = await ctx.database.db
     .insert(users)
-    .values({ email: `${role}${counter}-${Date.now()}@example.com`, passwordHash: "x", fullName: `${role} ${counter}` })
+    .values({
+      email: `${role}${counter}-${Date.now()}@example.com`,
+      passwordHash: "x",
+      fullName: `${role} ${counter}`,
+    })
     .returning();
   await ctx.database.db.insert(memberships).values({ userId: user!.id, restaurantId, role });
   const token = await ctx.app.deps.tokens.sign(user!.id);
