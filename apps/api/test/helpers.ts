@@ -1,4 +1,4 @@
-import { memberships, users, type DatabaseHandle } from "@restourant/db";
+import { createDatabase, memberships, users, type DatabaseHandle } from "@restourant/db";
 import { createTestDatabase } from "@restourant/db/testing";
 import type { Role } from "@restourant/shared";
 import { buildApp, type App } from "../src/app.js";
@@ -18,7 +18,11 @@ export type TestContext = {
 export const clock = { now: new Date("2026-10-23T08:00:00Z") };
 
 export async function createTestApp(): Promise<TestContext> {
-  const database = await createTestDatabase();
+  // TEST_DATABASE_URL runs the tests on a real Postgres (shared by every test app, so data must
+  // never collide), e.g. to see concurrent requests race; otherwise each app gets its own PGlite.
+  const url = process.env.TEST_DATABASE_URL;
+  const database = url ? await createDatabase(url) : await createTestDatabase();
+  if (url) await database.migrate();
   const mailer = createMemoryMailer();
   const app = await buildApp({
     deps: {
@@ -107,7 +111,7 @@ export async function addMember(ctx: TestContext, restaurantId: string, role: Ro
   counter += 1;
   const [user] = await ctx.database.db
     .insert(users)
-    .values({ email: `${role}${counter}@example.com`, passwordHash: "x", fullName: `${role} ${counter}` })
+    .values({ email: `${role}${counter}-${Date.now()}@example.com`, passwordHash: "x", fullName: `${role} ${counter}` })
     .returning();
   await ctx.database.db.insert(memberships).values({ userId: user!.id, restaurantId, role });
   const token = await ctx.app.deps.tokens.sign(user!.id);

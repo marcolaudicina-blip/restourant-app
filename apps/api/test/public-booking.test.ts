@@ -178,6 +178,16 @@ describe("booking from the public page", () => {
     expect((await book({ date: MONDAY })).status).toBe(409);
   });
 
+  it("keeps the service's covers when guests book at the same moment", async () => {
+    const [dinner] = (await owner.api.get(`${owner.base}/services`)).body.data;
+    await owner.api.patch(`${owner.base}/services/${dinner.id}`, { maxCovers: 4 });
+    // Three free tables, room for two bookings of 2.
+    const results = await Promise.all([book(), book(), book()]);
+    expect(results.map((r) => r.status).sort()).toEqual([201, 201, 409]);
+    const day = (await owner.api.get(`${owner.base}/reservations?date=${SATURDAY}`)).body.data;
+    expect(day).toHaveLength(2);
+  });
+
   it("turns large groups into requests for staff", async () => {
     await policy({ maxPartyOnline: 4 });
     const offer = await guest.get(`${page()}/availability?date=${SATURDAY}&partySize=10`);

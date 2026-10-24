@@ -1135,7 +1135,8 @@ async function runRestaurant(
 
   async function status(to: "cancelled" | "no_show" | "seated") {
     const r = await active();
-    if (!r) return;
+    // Same status: nothing to do, nothing to record.
+    if (!r || r.status === to) return;
     const t0 = await trail(r);
     const res = await owner.api.post(`${owner.base}/reservations/${r.id}/status`, { status: to });
     count(name, `stato ${to}: ${res.status === 200 ? "ok" : res.body.error?.code}`);
@@ -1256,6 +1257,10 @@ async function runRestaurant(
     });
     const got = res.status === 201 ? null : res.body.error?.code;
     count(name, `staff con tavolo scelto: ${got ?? "ok"}`);
+    // Staff may book past the pacing on purpose (ignorePacing): not the engine's doing.
+    // The API files the booking under the service whose window holds the time (they may overlap).
+    const filed = serviceByWindow(cfg, date, time) ?? service;
+    if (!got && !pacingOk(cfg, filed, before, date, time, party)) overLimit.add(date);
     const start = localToInstant(date, timeToMinutes(time), TZ).getTime();
     const end = start + durationOf(cfg, party, service.id, tables[0]!.roomId) * 60_000;
     const fake = {

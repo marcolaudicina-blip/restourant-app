@@ -59,6 +59,14 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:migrate
+      # PGlite has a single connection; on Postgres concurrent requests really race.
+      - name: API tests (PostgreSQL)
+        run: |
+          psql "$DATABASE_URL" -c "create database api_tests"
+          DATABASE_URL=postgres://postgres:postgres@localhost:5432/api_tests pnpm db:migrate
+          pnpm --filter @restourant/api exec vitest run --no-file-parallelism
+        env:
+          TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/api_tests
       - run: pnpm --filter @restourant/web build
       - run: pnpm --filter @restourant/web exec playwright install --with-deps chromium
       - name: End-to-end tests (embedded API, PostgreSQL)

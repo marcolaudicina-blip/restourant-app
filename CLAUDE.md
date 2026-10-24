@@ -64,6 +64,10 @@ pnpm db:migrate      # applies migrations to $DATABASE_URL
 - **No double booking** is enforced by an exclusion constraint on `reservation_tables`
   (migration 0002, needs `btree_gist`); keep `starts_at`/`ends_at`/`blocking` there in sync with the
   reservation via `writeTables` / status updates.
+- **Pacing and covers** are checked on a floor context loaded inside `withBookingLock` (reservations.service:
+  a transaction-scoped advisory lock per restaurant and day), so concurrent bookings, moves and guest
+  changes queue up instead of passing the checks together. PGlite has one connection and can't show such
+  races: `TEST_DATABASE_URL` runs the API tests (and the simulation, docs/simulazione.md) on real Postgres.
 - Reservation routes use the `reservations.read` / `reservations.write` permissions (staff included).
 - **Guests** (modules/guests): every booking is matched to a guest profile by `normalizePhone()` (then
   email) in `matchGuest`, inside the reservation transaction; profiles are created on first contact.

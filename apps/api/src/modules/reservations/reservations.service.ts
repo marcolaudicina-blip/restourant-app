@@ -10,7 +10,7 @@ import {
   type ReservationTablesInput,
   type ReservationUpdate,
 } from "@restourant/shared";
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { recordAudit } from "../../lib/audit.js";
 import { inTransaction, type TenantContext } from "../../lib/context.js";
 import { conflict, notFound, pgErrorCode, PG_EXCLUSION_VIOLATION } from "../../lib/errors.js";
@@ -239,36 +239,58 @@ export async function insertReservation(
   });
 }
 
+/**
+ * Runs `fn` in a transaction holding the restaurant's booking lock for these days, so two
+ * requests can't both pass the pacing and covers checks on what the other is about to add (the
+ * exclusion constraint only guards the tables). Load the floor context inside `fn`.
+ */
+export function withBookingLock<T>(
+  ctx: TenantContext,
+  dates: string[],
+  fn: (tx: TenantContext) => Promise<T>,
+): Promise<T> {
+  return inTransaction(ctx, async (tx) => {
+    // Sorted, so requests locking two days never wait on each other in opposite order.
+    for (const date of [...new Set(dates)].sort()) {
+      const key = `booking:${ctx.restaurantId}:${date}`;
+      await tx.db.execute(sql`select pg_advisory_xact_lock(hashtextextended(${key}, 0))`);
+    }
+    return fn(tx);
+  });
+}
+
 export async function createReservation(
   ctx: TenantContext,
   input: ReservationCreateInput,
 ): Promise<Reservation> {
-  const floor = await loadFloorContext(ctx, input.date);
-  const start = timeToMinutes(input.time);
-  const channel = input.channel ?? "staff";
-  const status = input.status ?? (channel === "walk_in" ? "seated" : "confirmed");
-  const service = resolveService(floor, start, input.serviceId, channel !== "walk_in");
+  const id = await withBookingLock(ctx, [input.date], async (tx) => {
+    const floor = await loadFloorContext(tx, input.date);
+    const start = timeToMinutes(input.time);
+    const channel = input.channel ?? "staff";
+    const status = input.status ?? (channel === "walk_in" ? "seated" : "confirmed");
+    const service = resolveService(floor, start, input.serviceId, channel !== "walk_in");
 
-  if (service && !input.ignorePacing) assertPacing(floor, service, start, input.partySize);
-  const seating = seat(floor, {
-    service,
-    start,
-    partySize: input.partySize,
-    tableIds: input.tableIds,
-    durationMinutes: input.durationMinutes,
-    roomId: input.roomId,
-    ignoreCapacity: input.ignoreCapacity ?? false,
-  });
+    if (service && !input.ignorePacing) assertPacing(floor, service, start, input.partySize);
+    const seating = seat(floor, {
+      service,
+      start,
+      partySize: input.partySize,
+      tableIds: input.tableIds,
+      durationMinutes: input.durationMinutes,
+      roomId: input.roomId,
+      ignoreCapacity: input.ignoreCapacity ?? false,
+    });
 
-  const id = await insertReservation(ctx, floor, {
-    service,
-    start,
-    seating,
-    status,
-    channel,
-    locale: input.locale,
-    input,
-    audit: { ...input, tableIds: seating.tableIds, assignedBy: seating.option ? "system" : "staff" },
+    return insertReservation(tx, floor, {
+      service,
+      start,
+      seating,
+      status,
+      channel,
+      locale: input.locale,
+      input,
+      audit: { ...input, tableIds: seating.tableIds, assignedBy: seating.option ? "system" : "staff" },
+    });
   });
   return getReservation(ctx, id);
 }
@@ -291,57 +313,58 @@ export async function updateReservation(
   let tableIds: string[] | null = null;
   let previousTableIds: string[] = [];
 
-  if (rescheduled) {
-    const floor = await loadFloorContext(ctx, date, { excludeReservationId: id });
-    const start = timeToMinutes(time);
-    const service = moved
-      ? resolveService(floor, start, null, current.channel !== "walk_in")
-      : current.serviceId
-        ? (floor.serviceById(current.serviceId) ?? null)
-        : null;
-    if (service && isBlockingStatus(current.status) && !ignorePacing && (moved || resized)) {
-      assertPacing(floor, service, start, partySize);
+  // A move or a bigger party is checked against the day under its lock (see withBookingLock).
+  await withBookingLock(ctx, rescheduled ? [current.date, date] : [], async (tx) => {
+    if (rescheduled) {
+      const floor = await loadFloorContext(tx, date, { excludeReservationId: id });
+      const start = timeToMinutes(time);
+      const service = moved
+        ? resolveService(floor, start, null, current.channel !== "walk_in")
+        : current.serviceId
+          ? (floor.serviceById(current.serviceId) ?? null)
+          : null;
+      if (service && isBlockingStatus(current.status) && !ignorePacing && (moved || resized)) {
+        assertPacing(floor, service, start, partySize);
+      }
+
+      const currentTableIds = (
+        await tx.db
+          .select({ tableId: reservationTables.tableId })
+          .from(reservationTables)
+          .where(eq(reservationTables.reservationId, id))
+      ).map((r) => r.tableId);
+      const keepDuration = !resized && fields.durationMinutes === undefined;
+      const seatArgs = {
+        service,
+        start,
+        partySize,
+        durationMinutes: fields.durationMinutes ?? (keepDuration ? current.durationMinutes : undefined),
+        roomId: current.requestedRoomId,
+        ignoreCapacity: ignoreCapacity ?? false,
+      };
+      const seating =
+        reassignTables !== undefined ||
+        currentTableIds.length === 0 ||
+        !isBlockingStatus(current.status) ||
+        ignoreCapacity
+          ? seat(floor, { ...seatArgs, tableIds: reassignTables ? undefined : currentTableIds })
+          : reseat(floor, seatArgs, currentTableIds, partySize < current.partySize);
+
+      tableIds = seating.tableIds;
+      previousTableIds = currentTableIds;
+      schedule = {
+        serviceId: service?.id ?? null,
+        date,
+        startTime: time,
+        startsAt: floor.instantAt(start),
+        endsAt: floor.instantAt(start + seating.durationMinutes),
+        durationMinutes: seating.durationMinutes,
+        partySize,
+        // A booking moved to another day gets its own reminder.
+        ...(date !== current.date ? { reminderSentAt: null } : {}),
+      };
     }
 
-    const currentTableIds = (
-      await ctx.db
-        .select({ tableId: reservationTables.tableId })
-        .from(reservationTables)
-        .where(eq(reservationTables.reservationId, id))
-    ).map((r) => r.tableId);
-    const keepDuration = !resized && fields.durationMinutes === undefined;
-    const seatArgs = {
-      service,
-      start,
-      partySize,
-      durationMinutes: fields.durationMinutes ?? (keepDuration ? current.durationMinutes : undefined),
-      roomId: current.requestedRoomId,
-      ignoreCapacity: ignoreCapacity ?? false,
-    };
-    const seating =
-      reassignTables !== undefined ||
-      currentTableIds.length === 0 ||
-      !isBlockingStatus(current.status) ||
-      ignoreCapacity
-        ? seat(floor, { ...seatArgs, tableIds: reassignTables ? undefined : currentTableIds })
-        : reseat(floor, seatArgs, currentTableIds, partySize < current.partySize);
-
-    tableIds = seating.tableIds;
-    previousTableIds = currentTableIds;
-    schedule = {
-      serviceId: service?.id ?? null,
-      date,
-      startTime: time,
-      startsAt: floor.instantAt(start),
-      endsAt: floor.instantAt(start + seating.durationMinutes),
-      durationMinutes: seating.durationMinutes,
-      partySize,
-      // A booking moved to another day gets its own reminder.
-      ...(date !== current.date ? { reminderSentAt: null } : {}),
-    };
-  }
-
-  await inTransaction(ctx, async (tx) => {
     const { date: _date, time: _time, partySize: _partySize, durationMinutes: _duration, ...guest } = fields;
     // A new phone or email can mean a different guest: match the profile again.
     const contactChanged = fields.guestPhone !== undefined || fields.guestEmail !== undefined;

@@ -18,6 +18,7 @@ import {
   getReservation,
   rescheduleReservation,
   setReservationStatus,
+  withBookingLock,
 } from "../reservations/reservations.service.js";
 import { getBookingPolicy } from "../restaurants/restaurants.service.js";
 import { notifyWaitlist } from "../waitlist/waitlist.service.js";
@@ -159,47 +160,51 @@ export async function changeGuestBooking(
   const { canModify, reservation } = await guestActions(ctx, id, now);
   if (!canModify) throw conflict("not_modifiable", "Questa prenotazione non si può più modificare online");
 
-  const floor = await loadFloorContext(ctx, input.date, { excludeReservationId: id });
-  const offer = onlineOffer(floor, input.date, input.partySize, now);
-  if (offer.mode === "closed") throw conflict(offer.reason, DAY_REASON_MESSAGES[offer.reason]);
-  if (offer.mode === "request") {
-    throw conflict("large_party", "Per gruppi così numerosi contatta direttamente il ristorante");
-  }
-  const match = offer.services
-    .flatMap((s) => s.slots.map((slot) => ({ serviceId: s.serviceId, slot })))
-    .find((x) => x.slot.time === input.time && x.slot.available);
-  if (!match) throw conflict("slot_unavailable", "Questo orario non è disponibile: scegline un altro");
+  // Checked and saved under the day's booking lock (see withBookingLock).
+  const { saved, status } = await withBookingLock(ctx, [reservation.date, input.date], async (tx) => {
+    const floor = await loadFloorContext(tx, input.date, { excludeReservationId: id });
+    const offer = onlineOffer(floor, input.date, input.partySize, now);
+    if (offer.mode === "closed") throw conflict(offer.reason, DAY_REASON_MESSAGES[offer.reason]);
+    if (offer.mode === "request") {
+      throw conflict("large_party", "Per gruppi così numerosi contatta direttamente il ristorante");
+    }
+    const match = offer.services
+      .flatMap((s) => s.slots.map((slot) => ({ serviceId: s.serviceId, slot })))
+      .find((x) => x.slot.time === input.time && x.slot.available);
+    if (!match) throw conflict("slot_unavailable", "Questo orario non è disponibile: scegline un altro");
 
-  const service = floor.serviceById(match.serviceId)!;
-  const start = timeToMinutes(input.time);
-  const fewer = input.partySize < reservation.partySize;
-  const seating = keepTables(floor, service, input.partySize, start, reservation.tableIds, fewer) ?? {
-    tableIds: match.slot.option!.tableIds,
-    durationMinutes: match.slot.durationMinutes!,
-  };
+    const service = floor.serviceById(match.serviceId)!;
+    const start = timeToMinutes(input.time);
+    const fewer = input.partySize < reservation.partySize;
+    const seating = keepTables(floor, service, input.partySize, start, reservation.tableIds, fewer) ?? {
+      tableIds: match.slot.option!.tableIds,
+      durationMinutes: match.slot.durationMinutes!,
+    };
 
-  // A request stays a request; a confirmed booking may need a new confirmation (e.g. more people).
-  const status =
-    reservation.status === "requested" ? "requested" : confirmationStatus(floor, input.partySize);
-  const saved = await rescheduleReservation(ctx, floor, id, {
-    service,
-    start,
-    time: input.time,
-    partySize: input.partySize,
-    seating,
-    status,
-    locale: input.locale,
-    audit: {
-      by: "guest",
-      from: {
-        date: reservation.date,
-        time: reservation.time,
-        partySize: reservation.partySize,
-        tableIds: reservation.tableIds,
+    // A request stays a request; a confirmed booking may need a new confirmation (e.g. more people).
+    const status =
+      reservation.status === "requested" ? "requested" : confirmationStatus(floor, input.partySize);
+    const saved = await rescheduleReservation(tx, floor, id, {
+      service,
+      start,
+      time: input.time,
+      partySize: input.partySize,
+      seating,
+      status,
+      locale: input.locale,
+      audit: {
+        by: "guest",
+        from: {
+          date: reservation.date,
+          time: reservation.time,
+          partySize: reservation.partySize,
+          tableIds: reservation.tableIds,
+        },
+        ...input,
+        ...(status !== reservation.status ? { status: { from: reservation.status, to: status } } : {}),
       },
-      ...input,
-      ...(status !== reservation.status ? { status: { from: reservation.status, to: status } } : {}),
-    },
+    });
+    return { saved, status };
   });
   if (!saved) throw conflict("slot_unavailable", "Questo orario è appena stato prenotato: scegline un altro");
 

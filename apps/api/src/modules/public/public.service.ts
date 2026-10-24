@@ -39,7 +39,7 @@ import {
 } from "../reservations/availability.service.js";
 import { sendBookingEmail } from "../notifications/booking-email.service.js";
 import { loadFloorContext, type FloorContext } from "../reservations/floor-context.js";
-import { getReservation, insertReservation } from "../reservations/reservations.service.js";
+import { getReservation, insertReservation, withBookingLock } from "../reservations/reservations.service.js";
 import { getBookingPolicy, getRestaurant } from "../restaurants/restaurants.service.js";
 import { listServices } from "../services/services.service.js";
 
@@ -252,57 +252,62 @@ export async function createOnlineReservation(
   const now = deps.now();
   if (input.website) throw new AppError(400, "rejected", "Prenotazione non valida");
 
-  const floor = await loadFloorContext(ctx, input.date);
-  const phone = input.guestPhone?.trim() || null;
-  const email = input.guestEmail?.trim() || null;
-  if (floor.policy.requirePhone && !phone) {
-    throw invalid("Il numero di telefono è obbligatorio", [{ path: "guestPhone", message: "Obbligatorio" }]);
-  }
-  if (phone && !normalizePhone(phone)) {
-    throw invalid("Numero di telefono non valido", [{ path: "guestPhone", message: "Non valido" }]);
-  }
-  if (floor.policy.requireEmail && !email) {
-    throw invalid("L'email è obbligatoria", [{ path: "guestEmail", message: "Obbligatoria" }]);
-  }
-
-  const offer = onlineOffer(floor, input.date, input.partySize, now);
-  if (offer.mode === "closed") throw conflict(offer.reason, DAY_REASON_MESSAGES[offer.reason]);
-  const match = offer.services
-    .flatMap((s) => s.slots.map((slot) => ({ serviceId: s.serviceId, slot })))
-    .find((x) => x.slot.time === input.time && x.slot.available);
-  if (!match) throw conflict("slot_unavailable", "Questo orario non è più disponibile: scegline un altro");
-
-  const service = floor.serviceById(match.serviceId)!;
-  const start = timeToMinutes(input.time);
-  const durationFor = floor.durationFor(input.partySize, service.id);
-  let seating: { tableIds: string[]; durationMinutes: number };
-  let status: ReservationStatus;
-  if (offer.mode === "request") {
-    // Hold suitable tables when some are free; otherwise staff find a solution.
-    const options = seatingOptions(floor, service, input.partySize, "staff");
-    const free = findFreeOption(options, start, durationFor, indexBusy(floor.busy, "staff"));
-    seating = free
-      ? { tableIds: free.option.tableIds, durationMinutes: free.durationMinutes }
-      : { tableIds: [], durationMinutes: durationFor(null) };
-    status = "requested";
-  } else {
-    seating = { tableIds: match.slot.option!.tableIds, durationMinutes: match.slot.durationMinutes! };
-    status = confirmationStatus(floor, input.partySize);
-  }
-
-  const { website: _website, privacyAccepted: _privacy, locale, ...details } = input;
-  const reservation = { ...details, guestPhone: phone, guestEmail: email };
   let id: string;
   try {
-    id = await insertReservation(ctx, floor, {
-      service,
-      start,
-      seating,
-      status,
-      channel: "online",
-      locale,
-      input: reservation,
-      audit: { ...reservation, tableIds: seating.tableIds, privacyAcceptedAt: now.toISOString() },
+    id = await withBookingLock(ctx, [input.date], async (tx) => {
+      const floor = await loadFloorContext(tx, input.date);
+      const phone = input.guestPhone?.trim() || null;
+      const email = input.guestEmail?.trim() || null;
+      if (floor.policy.requirePhone && !phone) {
+        throw invalid("Il numero di telefono è obbligatorio", [
+          { path: "guestPhone", message: "Obbligatorio" },
+        ]);
+      }
+      if (phone && !normalizePhone(phone)) {
+        throw invalid("Numero di telefono non valido", [{ path: "guestPhone", message: "Non valido" }]);
+      }
+      if (floor.policy.requireEmail && !email) {
+        throw invalid("L'email è obbligatoria", [{ path: "guestEmail", message: "Obbligatoria" }]);
+      }
+
+      const offer = onlineOffer(floor, input.date, input.partySize, now);
+      if (offer.mode === "closed") throw conflict(offer.reason, DAY_REASON_MESSAGES[offer.reason]);
+      const match = offer.services
+        .flatMap((s) => s.slots.map((slot) => ({ serviceId: s.serviceId, slot })))
+        .find((x) => x.slot.time === input.time && x.slot.available);
+      if (!match)
+        throw conflict("slot_unavailable", "Questo orario non è più disponibile: scegline un altro");
+
+      const service = floor.serviceById(match.serviceId)!;
+      const start = timeToMinutes(input.time);
+      const durationFor = floor.durationFor(input.partySize, service.id);
+      let seating: { tableIds: string[]; durationMinutes: number };
+      let status: ReservationStatus;
+      if (offer.mode === "request") {
+        // Hold suitable tables when some are free; otherwise staff find a solution.
+        const options = seatingOptions(floor, service, input.partySize, "staff");
+        const free = findFreeOption(options, start, durationFor, indexBusy(floor.busy, "staff"));
+        seating = free
+          ? { tableIds: free.option.tableIds, durationMinutes: free.durationMinutes }
+          : { tableIds: [], durationMinutes: durationFor(null) };
+        status = "requested";
+      } else {
+        seating = { tableIds: match.slot.option!.tableIds, durationMinutes: match.slot.durationMinutes! };
+        status = confirmationStatus(floor, input.partySize);
+      }
+
+      const { website: _website, privacyAccepted: _privacy, locale, ...details } = input;
+      const reservation = { ...details, guestPhone: phone, guestEmail: email };
+      return insertReservation(tx, floor, {
+        service,
+        start,
+        seating,
+        status,
+        channel: "online",
+        locale,
+        input: reservation,
+        audit: { ...reservation, tableIds: seating.tableIds, privacyAcceptedAt: now.toISOString() },
+      });
     });
   } catch (error) {
     // Someone else took the last table between the guest's choice and this request.
