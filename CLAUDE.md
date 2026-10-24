@@ -78,6 +78,9 @@ pnpm db:migrate      # applies migrations to $DATABASE_URL
   one-time link (`invitations`, only SHA-256 of tokens stored), managers handle staff only. Password
   reset by email (1 h) or by a manager's link (24 h). `users.session_version` is in every JWT
   (`ver`); bumping it on password change/reset rejects older sessions in `authenticate`.
+- **Import** (modules/import): CSV is parsed and mapped in the browser with `packages/shared/src/csv.ts`
+  (`parseCsv`, `detectColumns`, `mapRows`); the API validates each row (`guestImportRow`,
+  `reservationImportRow`) and reports errors by row. Re-importing is idempotent.
 - Tables may have `onlineMaxCovers`: online seating treats it as the table's capacity (alone and joined).
 - Drizzle uses `casing: "snake_case"`: write camelCase in TypeScript, columns are snake_case.
 

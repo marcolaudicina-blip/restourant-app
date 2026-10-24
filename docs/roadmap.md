@@ -13,8 +13,9 @@ storico modifiche.
    durate + ritmo + blocchi, con il motivo di ogni orario non disponibile
 3. ✅ **Gestionale web** (Next.js): configurazione guidata, lista del giorno, nuova prenotazione con
    orari disponibili, sala con spostamento e unione dei tavoli, editor della disposizione,
-   configurazione completa. Da fare: aggiornamento istantaneo (oggi ogni 20 secondi), griglia
-   sale × orari, app per telefono
+   configurazione completa, vista a griglia tavoli × orari con trascinamento, foglio del servizio da
+   stampare, aggiornamento tra dispositivi entro 10 secondi con avviso delle prenotazioni online,
+   personale con inviti e ruoli. Da fare: app per telefono
 4. ✅ **Pagina di prenotazione pubblica** con colori, logo, copertina e foto del locale, link da
    condividere, pulsante e modulo da inserire nel sito (vedi `pagina-prenotazione.md`). Da fare:
    link per modificare o disdire, versione in inglese, QR code
@@ -22,7 +23,7 @@ storico modifiche.
    (Resend). Da fare: promemoria, modifica e cancellazione, prenotazioni inserite dallo staff
 6. ✅ **Scheda cliente**: creata in automatico dalle prenotazioni e riconosciuta dal telefono, note
    permanenti, etichette, visite / coperti / no-show / cancellazioni, storico, cancellazione con
-   anonimizzazione (GDPR). Da fare: importazione clienti da Superb
+   anonimizzazione (GDPR), importazione di clienti e prenotazioni da CSV (Superb e altri)
 7. ⏳ Configurazione del nostro ristorante e 1–2 settimane in parallelo a Superb
 
 ## Fase 2: renderlo vendibile

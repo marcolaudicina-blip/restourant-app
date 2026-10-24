@@ -19,6 +19,7 @@ const SECTIONS = [
   { href: "/configurazione/chiusure", label: "Chiusure" },
   { href: "/configurazione/locale", label: "Dati del locale" },
   { href: "/configurazione/personale", label: "Personale", permission: "team.manage" },
+  { href: "/configurazione/importa", label: "Importa", permission: "config.write" },
 ] as const satisfies { href: string; label: string; permission?: Permission }[];
 
 export default function ConfigLayout({ children }: { children: ReactNode }) {

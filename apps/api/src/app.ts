@@ -25,6 +25,7 @@ import { calendarExceptionRoutes } from "./modules/calendar-exceptions/calendar-
 import { combinationRoutes } from "./modules/combinations/combinations.routes.js";
 import { durationRuleRoutes } from "./modules/duration-rules/duration-rules.routes.js";
 import { guestRoutes } from "./modules/guests/guests.routes.js";
+import { importRoutes } from "./modules/import/import.routes.js";
 import { publicRoutes } from "./modules/public/public.routes.js";
 import { reservationRoutes } from "./modules/reservations/reservations.routes.js";
 import { restaurantRoutes } from "./modules/restaurants/restaurants.routes.js";
@@ -157,6 +158,7 @@ export async function buildApp(options: BuildAppOptions) {
           await scope.register(guestRoutes);
           await scope.register(bookingPageRoutes);
           await scope.register(teamRoutes);
+          await scope.register(importRoutes);
         },
         { prefix: "/restaurants/:restaurantId" },
       );

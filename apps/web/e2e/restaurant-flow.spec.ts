@@ -288,6 +288,43 @@ test("the owner invites a waiter, who joins with the link", async ({ page, brows
   await phone.close();
 });
 
+test("imports guests and bookings from another system's CSV", async ({ page }, testInfo) => {
+  await register(page, "Trattoria Import");
+  await page.getByRole("button", { name: /Trattoria/ }).click();
+  await page.getByRole("button", { name: "Usa questo modello" }).click();
+  await expect(page.getByRole("heading", { name: "Configurazione" })).toBeVisible();
+  await page.getByRole("link", { name: "Importa" }).click();
+
+  const guests =
+    "Nome;Cognome;Cellulare;E-mail;Tag;Note\nAnna;Neri;333 444 5555;anna@example.com;VIP;Celiaca\nBruno;Gialli;347 111 2222;;;\n;;333 999 0000;;;";
+  await page
+    .getByLabel("File CSV")
+    .setInputFiles({ name: "clienti.csv", mimeType: "text/csv", buffer: Buffer.from(guests) });
+  await expect(page.getByLabel("Colonna per Telefono")).toHaveValue("2");
+  await expect(page.getByText("Riga 4: Nome mancante")).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("13-importa.png"), fullPage: true });
+  await page.getByRole("button", { name: "Importa 2 clienti" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Importazione completata" })).toContainText(
+    "2 aggiunti",
+  );
+
+  const [y, m, d] = nextSaturday().split("-");
+  const bookings = `Data,Ora,Coperti,Cliente,Telefono,Tavolo\n${d}/${m}/${y},20:30,4,Anna Neri,333 444 5555,T7`;
+  await page.getByRole("button", { name: "Prenotazioni future" }).click();
+  await page
+    .getByLabel("File CSV")
+    .setInputFiles({ name: "prenotazioni.csv", mimeType: "text/csv", buffer: Buffer.from(bookings) });
+  await page.getByRole("button", { name: "Importa 1 prenotazioni" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Importazione completata" })).toContainText(
+    "1 aggiunti",
+  );
+
+  await page.goto(`/prenotazioni?data=${nextSaturday()}`);
+  const anna = page.getByRole("listitem").filter({ hasText: "Anna Neri" });
+  await expect(anna).toContainText("Tavolo T7");
+  await expect(anna).toContainText("VIP");
+});
+
 test("login, wrong password and logout", async ({ page }) => {
   await page.goto("/prenotazioni");
   await expect(page).toHaveURL(/\/login/);
