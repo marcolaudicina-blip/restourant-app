@@ -82,3 +82,8 @@ export const onlineReservationInput = z.object({
 });
 
 export type OnlineReservationInput = z.infer<typeof onlineReservationInput>;
+
+/** A guest moving their own booking from the link in their email. */
+export const guestBookingChangeInput = z.object({ date: dateString, time: timeString, partySize });
+
+export type GuestBookingChangeInput = z.infer<typeof guestBookingChangeInput>;

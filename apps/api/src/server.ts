@@ -17,6 +17,7 @@ const app = await buildApp({
     now: () => new Date(),
     mailer: mailerFromConfig(config.email),
     publicUrl: config.publicUrl,
+    cronSecret: config.cronSecret,
   },
   corsOrigins: config.corsOrigins,
   trustProxy: config.trustProxy,

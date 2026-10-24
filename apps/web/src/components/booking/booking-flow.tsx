@@ -19,9 +19,9 @@ import type { PublicAvailability, PublicBooking, PublicDay, PublicProfile } from
 import { Spinner } from "../ui/spinner";
 
 /** Party sizes offered as buttons; bigger groups use the stepper. */
-const MAX_CHIPS = 10;
+export const MAX_CHIPS = 10;
 
-const people = (n: number) => `${n} ${n === 1 ? "persona" : "persone"}`;
+export const people = (n: number) => `${n} ${n === 1 ? "persona" : "persone"}`;
 
 /**
  * The booking widget of the public page: how many, which day, what time, who. Defaults to two
@@ -211,7 +211,7 @@ function useRevealOnMount<T extends HTMLElement>(enabled: boolean) {
   return ref;
 }
 
-function Step({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
+export function Step({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
   return (
     <section>
       <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
@@ -223,7 +223,7 @@ function Step({ icon, title, children }: { icon: ReactNode; title: string; child
   );
 }
 
-function Chip({
+export function Chip({
   selected,
   className,
   ...props
@@ -245,7 +245,7 @@ function Chip({
   );
 }
 
-function StepperButton({
+export function StepperButton({
   label,
   children,
   ...props
@@ -265,7 +265,7 @@ function StepperButton({
 const weekday = new Intl.DateTimeFormat("it-IT", { weekday: "short", timeZone: "UTC" });
 const month = new Intl.DateTimeFormat("it-IT", { month: "short", timeZone: "UTC" });
 
-function DayPicker({
+export function DayPicker({
   days,
   selected,
   today,
@@ -309,7 +309,7 @@ function DayPicker({
   );
 }
 
-function TimePicker({
+export function TimePicker({
   availability,
   selected,
   onSelect,
@@ -600,7 +600,7 @@ export function Confirmation({
   );
 }
 
-function PhoneLink({ phone }: { phone: string }) {
+export function PhoneLink({ phone }: { phone: string }) {
   return (
     <a
       href={`tel:${phone.replace(/\s/g, "")}`}
@@ -612,6 +612,6 @@ function PhoneLink({ phone }: { phone: string }) {
   );
 }
 
-function Notice({ children, className }: { children: ReactNode; className?: string }) {
+export function Notice({ children, className }: { children: ReactNode; className?: string }) {
   return <p className={cn("rounded-xl bg-canvas px-3 py-2.5 text-sm text-muted", className)}>{children}</p>;
 }

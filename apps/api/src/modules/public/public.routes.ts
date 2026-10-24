@@ -1,8 +1,15 @@
-import { dateString, onlineReservationInput, partySize } from "@restourant/shared";
+import { dateString, guestBookingChangeInput, onlineReservationInput, partySize } from "@restourant/shared";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { idParams } from "../../lib/http.js";
 import { getMedia } from "../booking-page/booking-page.service.js";
+import {
+  cancelGuestBooking,
+  changeGuestBooking,
+  getGuestAvailability,
+  getGuestBooking,
+  guestBookingContext,
+} from "./guest-booking.service.js";
 import {
   createOnlineReservation,
   getOpenDays,
@@ -12,6 +19,7 @@ import {
 } from "./public.service.js";
 
 const slugParams = z.object({ slug: z.string().min(1).max(80) });
+const tokenParams = z.object({ token: z.string().min(10).max(120) });
 const availabilityQuery = z.object({ date: dateString, partySize: z.coerce.number().pipe(partySize) });
 
 /** Generous for people browsing times, strict for bookings. */
@@ -53,6 +61,41 @@ export const publicRoutes: FastifyPluginAsyncZod = async (app) => {
           request.log,
         ),
       };
+    },
+  );
+
+  // The guest's own booking, from the link in their emails.
+  const booking = (token: string) => guestBookingContext(app.deps.db, app.deps.tokens, token);
+
+  app.get("/bookings/:token", { schema: { params: tokenParams }, config: READ_LIMIT }, async (request) => {
+    const { ctx, id } = await booking(request.params.token);
+    return { data: await getGuestBooking(ctx, id, app.deps.now()) };
+  });
+
+  app.get(
+    "/bookings/:token/availability",
+    { schema: { params: tokenParams, querystring: availabilityQuery }, config: READ_LIMIT },
+    async (request) => {
+      const { ctx, id } = await booking(request.params.token);
+      return { data: await getGuestAvailability(ctx, id, request.query, app.deps.now()) };
+    },
+  );
+
+  app.post(
+    "/bookings/:token/cancel",
+    { schema: { params: tokenParams }, config: BOOK_LIMIT },
+    async (request) => {
+      const { ctx, id } = await booking(request.params.token);
+      return { data: await cancelGuestBooking(ctx, id, app.deps, request.log) };
+    },
+  );
+
+  app.post(
+    "/bookings/:token/change",
+    { schema: { params: tokenParams, body: guestBookingChangeInput }, config: BOOK_LIMIT },
+    async (request) => {
+      const { ctx, id } = await booking(request.params.token);
+      return { data: await changeGuestBooking(ctx, id, request.body, app.deps, request.log) };
     },
   );
 

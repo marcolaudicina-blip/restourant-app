@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BellOff, BellRing, Globe, X } from "lucide-react";
+import { BellOff, BellRing, CalendarClock, CalendarX, Globe, X } from "lucide-react";
 import Link from "next/link";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { api } from "@/lib/api";
@@ -11,9 +11,23 @@ import type { Activity, ActivityBrief } from "@/lib/types";
 
 /*
  * Keeps every device in the room in sync without websockets: every few seconds it asks the API
- * whether anything changed (then the lists refresh at once), and announces bookings that just
- * arrived from the public page with a banner and a chime.
+ * whether anything changed (then the lists refresh at once), and announces with a banner and a
+ * chime bookings that just arrived from the public page, and those guests moved or cancelled.
  */
+
+type Alert = ActivityBrief & { kind: "new" | "cancelled" | "updated"; key: string };
+
+const ALERT_COPY = {
+  new: { icon: Globe, tone: "border-violet-200", badge: "bg-violet-100 text-violet-700" },
+  cancelled: { icon: CalendarX, tone: "border-red-200", badge: "bg-red-100 text-red-700" },
+  updated: { icon: CalendarClock, tone: "border-amber-200", badge: "bg-amber-100 text-amber-800" },
+};
+
+function alertTitle(a: Alert) {
+  if (a.kind === "cancelled") return "Prenotazione disdetta dal cliente";
+  if (a.kind === "updated") return "Prenotazione modificata dal cliente";
+  return a.status === "requested" ? "Nuova richiesta online" : "Nuova prenotazione online";
+}
 
 const POLL_MS = 10_000;
 const SOUND_KEY = "rs_sound";
@@ -65,7 +79,7 @@ export function ActivityProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const since = useRef<string | null>(null);
   const lastChange = useRef<string | null | undefined>(undefined);
-  const [alerts, setAlerts] = useState<ActivityBrief[]>([]);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [sound, setSound] = useState(true);
 
   useEffect(() => {
@@ -94,11 +108,15 @@ export function ActivityProvider({ children }: { children: ReactNode }) {
       }
     }
     lastChange.current = data.lastChangeAt;
-    if (data.newOnline.length > 0) {
-      setAlerts((current) => [
-        ...current,
-        ...data.newOnline.filter((n) => !current.some((c) => c.id === n.id)),
-      ]);
+    const incoming: Alert[] = [
+      ...data.newOnline.map((n) => ({ ...n, kind: "new" as const, key: n.id })),
+      ...data.guestChanges.map((c) => ({
+        ...c,
+        key: `${c.id}:${c.kind}:${c.date}:${c.time}:${c.partySize}`,
+      })),
+    ];
+    if (incoming.length > 0) {
+      setAlerts((current) => [...current, ...incoming.filter((n) => !current.some((c) => c.key === n.key))]);
       if (readSound()) chime();
     }
   }, [activity.data, queryClient, restaurantId]);
@@ -109,7 +127,7 @@ export function ActivityProvider({ children }: { children: ReactNode }) {
     document.title = alerts.length > 0 ? `(${alerts.length}) ${base}` : base;
   }, [alerts.length]);
 
-  const dismiss = (id: string) => setAlerts((current) => current.filter((a) => a.id !== id));
+  const dismiss = (key: string) => setAlerts((current) => current.filter((a) => a.key !== key));
   const toggleSound = () => {
     const next = !sound;
     setSound(next);
@@ -130,38 +148,41 @@ export function ActivityProvider({ children }: { children: ReactNode }) {
           role="status"
           aria-live="polite"
         >
-          {alerts.slice(-3).map((a) => (
-            <div key={a.id} className="rounded-xl border border-violet-200 bg-surface p-3 shadow-xl">
-              <div className="flex items-start gap-3">
-                <span className="rounded-full bg-violet-100 p-2 text-violet-700">
-                  <Globe className="h-4 w-4" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold">
-                    {a.status === "requested" ? "Nuova richiesta online" : "Nuova prenotazione online"}
-                  </p>
-                  <p className="truncate text-sm text-muted">
-                    {a.guestName} · {a.partySize} pers. · {formatDateShort(a.date)} ore {a.time}
-                  </p>
-                  <Link
-                    href={`/prenotazioni?data=${a.date}`}
-                    onClick={() => dismiss(a.id)}
-                    className="mt-1 inline-block text-sm font-medium text-brand-700 hover:underline"
+          {alerts.slice(-3).map((a) => {
+            const { icon: Icon, tone, badge } = ALERT_COPY[a.kind];
+            return (
+              <div key={a.key} className={`rounded-xl border ${tone} bg-surface p-3 shadow-xl`}>
+                <div className="flex items-start gap-3">
+                  <span className={`rounded-full p-2 ${badge}`}>
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold">{alertTitle(a)}</p>
+                    <p className="truncate text-sm text-muted">
+                      {a.guestName} · {a.partySize} pers. · {formatDateShort(a.date)} ore {a.time}
+                    </p>
+                    <Link
+                      href={`/prenotazioni?data=${a.date}`}
+                      onClick={() => dismiss(a.key)}
+                      className="mt-1 inline-block text-sm font-medium text-brand-700 hover:underline"
+                    >
+                      {a.kind === "new" && a.status === "requested"
+                        ? "Conferma o rifiuta"
+                        : "Apri la giornata"}
+                    </Link>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => dismiss(a.key)}
+                    aria-label="Chiudi avviso"
+                    className="rounded p-1 text-muted hover:bg-black/5"
                   >
-                    {a.status === "requested" ? "Conferma o rifiuta" : "Apri la giornata"}
-                  </Link>
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => dismiss(a.id)}
-                  aria-label="Chiudi avviso"
-                  className="rounded p-1 text-muted hover:bg-black/5"
-                >
-                  <X className="h-4 w-4" />
-                </button>
               </div>
-            </div>
-          ))}
+            );
+          })}
           <button
             type="button"
             onClick={toggleSound}

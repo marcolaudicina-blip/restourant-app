@@ -19,7 +19,14 @@ import {
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { recordAudit } from "../../lib/audit.js";
 import { inTransaction, type TenantContext } from "../../lib/context.js";
-import { AppError, conflict, invalid, notFound } from "../../lib/errors.js";
+import {
+  AppError,
+  conflict,
+  invalid,
+  notFound,
+  pgErrorCode,
+  PG_EXCLUSION_VIOLATION,
+} from "../../lib/errors.js";
 import { definedOnly } from "../../lib/http.js";
 import { guestStats, matchGuest } from "../guests/guests.service.js";
 import type { Service } from "../services/services.service.js";
@@ -461,6 +468,8 @@ export async function updateReservation(
       endsAt: floor.instantAt(start + seating.durationMinutes),
       durationMinutes: seating.durationMinutes,
       partySize,
+      // A booking moved to another day gets its own reminder.
+      ...(date !== current.date ? { reminderSentAt: null } : {}),
     };
   }
 
@@ -523,10 +532,63 @@ export async function setReservationTables(
   return getReservation(ctx, id);
 }
 
+/**
+ * Moves a booking to a time the caller already found free (the guest's own change, checked by the
+ * online engine): new schedule, tables and status in one go. Returns false when someone else took
+ * the tables in the meantime.
+ */
+export async function rescheduleReservation(
+  ctx: TenantContext,
+  floor: FloorContext,
+  id: string,
+  args: {
+    service: Service;
+    start: number;
+    time: string;
+    partySize: number;
+    seating: Pick<Seating, "tableIds" | "durationMinutes">;
+    status: ReservationStatus;
+    audit: Record<string, unknown>;
+  },
+): Promise<boolean> {
+  try {
+    await inTransaction(ctx, async (tx) => {
+      const [row] = await tx.db
+        .update(reservations)
+        .set({
+          serviceId: args.service.id,
+          date: floor.date,
+          startTime: args.time,
+          startsAt: floor.instantAt(args.start),
+          endsAt: floor.instantAt(args.start + args.seating.durationMinutes),
+          durationMinutes: args.seating.durationMinutes,
+          partySize: args.partySize,
+          status: args.status,
+          reminderSentAt: null,
+        })
+        .where(and(eq(reservations.id, id), eq(reservations.restaurantId, ctx.restaurantId)))
+        .returning();
+      await writeTables(tx, row!, args.seating.tableIds);
+      await recordAudit(tx, {
+        entity: "reservation",
+        entityId: id,
+        action: "update",
+        changes: { ...args.audit, tableIds: args.seating.tableIds },
+      });
+    });
+    return true;
+  } catch (error) {
+    if (pgErrorCode(error) === PG_EXCLUSION_VIOLATION) return false;
+    throw error;
+  }
+}
+
 export async function setReservationStatus(
   ctx: TenantContext,
   id: string,
   status: ReservationStatus,
+  /** Extra details for the audit log, e.g. `{ by: "guest" }`. */
+  auditNote: Record<string, unknown> = {},
 ): Promise<Reservation> {
   const current = await getRow(ctx, id);
   if (current.status === status) return getReservation(ctx, id);
@@ -556,7 +618,7 @@ export async function setReservationStatus(
       entity: "reservation",
       entityId: id,
       action: "update",
-      changes: { status: { from: current.status, to: status } },
+      changes: { status: { from: current.status, to: status }, ...auditNote },
     });
   });
   return getReservation(ctx, id);

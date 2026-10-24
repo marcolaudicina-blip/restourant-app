@@ -26,6 +26,7 @@ function getApp(): Promise<App> {
         now: () => new Date(),
         mailer: mailerFromConfig(config.email),
         publicUrl: config.publicUrl,
+        cronSecret: config.cronSecret,
       },
       logger: { level: config.logLevel },
     });

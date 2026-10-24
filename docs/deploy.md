@@ -39,10 +39,12 @@ va tolto. Quando `twentyreserve.com` diventerà il sito di presentazione baster�
 | `RESEND_API_KEY`                        | chiave API di [Resend](https://resend.com) per le email ai clienti                            |
 | `EMAIL_FROM`                            | mittente su un dominio verificato in Resend: `TwentyReserve <prenotazioni@twentyreserve.com>` |
 | `APP_URL`                               | `https://app.twentyreserve.com`: indirizzo per link e logo nelle email                        |
+| `CRON_SECRET`                           | stringa casuale di almeno 16 caratteri: autorizza il job dei promemoria (Vercel Cron)         |
 
 Senza `RESEND_API_KEY` ed `EMAIL_FROM` le email non partono (le prenotazioni funzionano comunque, e il
 registro modifiche annota `not_configured`). Mettile solo in Production, così le anteprime non
-scrivono mai ai clienti.
+scrivono mai ai clienti. Senza `CRON_SECRET` il job dei promemoria (`apps/web/vercel.json`, ogni
+giorno alle 8:00 UTC) risponde 503 e non manda nulla.
 
 ### Anteprime
 

@@ -141,7 +141,7 @@ type Offer =
     };
 
 /** The arrival times a guest can choose on a date, with the rules of the booking page applied. */
-function onlineOffer(floor: FloorContext, date: string, partySize: number, now: Date): Offer {
+export function onlineOffer(floor: FloorContext, date: string, partySize: number, now: Date): Offer {
   const policy = floor.policy;
   const query = { date, partySize, channel: "online" as const };
 
@@ -180,8 +180,11 @@ export async function getPublicAvailability(
   ctx: TenantContext,
   query: { date: string; partySize: number },
   now: Date,
+  /** A guest moving their own booking: its tables count as free. */
+  excludeReservationId?: string,
 ) {
-  const offer = onlineOffer(await loadFloorContext(ctx, query.date), query.date, query.partySize, now);
+  const floor = await loadFloorContext(ctx, query.date, { excludeReservationId });
+  const offer = onlineOffer(floor, query.date, query.partySize, now);
   if (offer.mode === "closed") {
     return {
       ...query,
@@ -204,7 +207,7 @@ export async function getPublicAvailability(
   };
 }
 
-function confirmationStatus(floor: FloorContext, partySize: number): ReservationStatus {
+export function confirmationStatus(floor: FloorContext, partySize: number): ReservationStatus {
   const policy = floor.policy;
   switch (policy.confirmationMode) {
     case "auto":
@@ -219,7 +222,7 @@ function confirmationStatus(floor: FloorContext, partySize: number): Reservation
 export async function createOnlineReservation(
   ctx: TenantContext,
   input: OnlineReservationInput,
-  deps: Pick<AppDeps, "mailer" | "publicUrl" | "now">,
+  deps: Pick<AppDeps, "mailer" | "publicUrl" | "now" | "tokens">,
   log: FastifyBaseLogger,
 ) {
   const now = deps.now();

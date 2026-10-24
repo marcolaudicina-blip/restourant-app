@@ -13,6 +13,8 @@ export type AppDeps = {
   mailer: Mailer;
   /** Public address of the web app, for links and pictures in emails; null when unknown. */
   publicUrl: string | null;
+  /** Shared with the scheduler that runs internal jobs (reminders); null disables them. */
+  cronSecret: string | null;
 };
 
 declare module "fastify" {

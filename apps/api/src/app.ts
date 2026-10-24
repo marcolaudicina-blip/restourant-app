@@ -27,6 +27,7 @@ import { durationRuleRoutes } from "./modules/duration-rules/duration-rules.rout
 import { guestRoutes } from "./modules/guests/guests.routes.js";
 import { importRoutes } from "./modules/import/import.routes.js";
 import { publicRoutes } from "./modules/public/public.routes.js";
+import { internalRoutes } from "./modules/reminders/reminders.routes.js";
 import { reservationRoutes } from "./modules/reservations/reservations.routes.js";
 import { restaurantRoutes } from "./modules/restaurants/restaurants.routes.js";
 import { roomRoutes } from "./modules/rooms/rooms.routes.js";
@@ -136,6 +137,7 @@ export async function buildApp(options: BuildAppOptions) {
     async (v1) => {
       await v1.register(authRoutes);
       await v1.register(publicRoutes, { prefix: "/public" });
+      await v1.register(internalRoutes, { prefix: "/internal" });
 
       v1.get("/templates", async (request) => {
         await authenticate(request);

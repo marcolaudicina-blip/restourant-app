@@ -1,8 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 const PUBLIC_PATHS = ["/login", "/registrati", "/password-dimenticata"];
-/** Open to everyone, signed in or not: guests' booking pages, invitation and password links. */
-const OPEN_PATHS = ["/prenota/", "/invito/", "/reimposta-password/"];
+/**
+ * Open to everyone, signed in or not: guests' booking pages and their own bookings, invitation and
+ * password links.
+ */
+const OPEN_PATHS = ["/prenota/", "/prenotazione/", "/invito/", "/reimposta-password/"];
 
 /** Sends signed-out visitors to the login page. The API still verifies every request. */
 export function middleware(request: NextRequest) {

@@ -57,6 +57,8 @@ export const reservations = pgTable(
     seatedAt: timestamp({ withTimezone: true }),
     completedAt: timestamp({ withTimezone: true }),
     cancelledAt: timestamp({ withTimezone: true }),
+    /** When the day-before reminder went out; it is sent once. */
+    reminderSentAt: timestamp({ withTimezone: true }),
     ...timestamps,
   },
   (t) => [

@@ -44,6 +44,8 @@ export const bookingPolicies = pgTable(
     requirePhone: boolean().notNull(),
     requireEmail: boolean().notNull(),
     policyText: text(),
+    emailStaffBookings: boolean().notNull().default(true),
+    sendReminders: boolean().notNull().default(true),
     ...timestamps,
   },
   (t) => [

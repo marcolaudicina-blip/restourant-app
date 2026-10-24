@@ -38,6 +38,10 @@ export const bookingPolicyFields = z.object({
   requirePhone: z.boolean(),
   requireEmail: z.boolean(),
   policyText: optionalText(4000),
+  /** Email the guest when staff add, move or cancel a booking (online bookings are always emailed). */
+  emailStaffBookings: z.boolean(),
+  /** Email a reminder the day before. */
+  sendReminders: z.boolean(),
 });
 
 export function checkBookingPolicy(value: z.infer<typeof bookingPolicyFields>, ctx: z.RefinementCtx) {
@@ -81,4 +85,6 @@ export const DEFAULT_BOOKING_POLICY: BookingPolicy = {
   requirePhone: true,
   requireEmail: true,
   policyText: null,
+  emailStaffBookings: true,
+  sendReminders: true,
 };

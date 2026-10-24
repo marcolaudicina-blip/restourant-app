@@ -29,6 +29,7 @@ export async function createTestApp(): Promise<TestContext> {
       now: () => clock.now,
       mailer,
       publicUrl: "https://app.test",
+      cronSecret: "test-cron-secret-0123456789",
     },
     rateLimit: false,
   });

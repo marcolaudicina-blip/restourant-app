@@ -196,6 +196,26 @@ export type PublicBooking = {
   emailSent: boolean;
 };
 
+/** A guest's own booking, opened from the link in their emails. */
+export type GuestBookingView = {
+  restaurant: PublicProfile;
+  booking: {
+    date: string;
+    time: string;
+    partySize: number;
+    durationMinutes: number;
+    guestName: string;
+    guestNote: string | null;
+    status: ReservationStatus;
+  };
+  canCancel: boolean;
+  canModify: boolean;
+  /** Until when changes are possible online (ISO instant). */
+  deadline: string;
+  /** Why nothing can be done online, when that is the case. */
+  message: string | null;
+};
+
 // Team -----------------------------------------------------------------------------------------
 
 export type TeamMember = { userId: string; fullName: string; email: string; role: Role; since: string };
@@ -224,4 +244,6 @@ export type Activity = {
   lastChangeAt: string | null;
   newOnline: ActivityBrief[];
   pendingRequests: ActivityBrief[];
+  /** Bookings guests moved or cancelled themselves from the link in their emails. */
+  guestChanges: (ActivityBrief & { kind: "cancelled" | "updated" })[];
 };

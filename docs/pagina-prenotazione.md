@@ -80,16 +80,44 @@ impostato.
 
 Se il cliente ha lasciato l'email, riceve:
 
-| Quando                                         | Email                                              |
-| ---------------------------------------------- | -------------------------------------------------- |
-| Prenotazione confermata subito                 | "Prenotazione confermata" con giorno, ora, persone |
-| Richiesta (conferma manuale o gruppo numeroso) | "Richiesta di prenotazione ricevuta"               |
-| Lo staff conferma una richiesta online         | "Prenotazione confermata"                          |
+| Quando                                              | Email                                              |
+| --------------------------------------------------- | -------------------------------------------------- |
+| Prenotazione online confermata subito               | "Prenotazione confermata" con giorno, ora, persone |
+| Richiesta (conferma manuale o gruppo numeroso)      | "Richiesta di prenotazione ricevuta"               |
+| Lo staff conferma una richiesta online              | "Prenotazione confermata"                          |
+| Lo staff inserisce una prenotazione (¹)             | "Prenotazione confermata"                          |
+| Cambiano giorno, ora o persone (staff o cliente)(¹) | "Prenotazione modificata"                          |
+| Cancellata dallo staff (¹) o dal cliente            | "Prenotazione cancellata"                          |
+| Il giorno prima, prenotazioni confermate (²)        | "Promemoria: …, domani alle 20:00"                 |
+
+(¹) Con **Avvisa delle prenotazioni gestite dallo staff** (Regole → Email ai clienti, attivo di
+default). Walk-in, note, tavoli e importazioni non mandano email.
+(²) Con **Promemoria il giorno prima** (attivo di default): parte ogni mattina alle 8:00 UTC (9 o 10
+in Italia) da un job pianificato di Vercel (`apps/web/vercel.json` → `/api/cron/reminders` →
+`POST /v1/internal/reminders`, protetto da `CRON_SECRET`). Ogni prenotazione riceve un solo
+promemoria (`reservations.reminder_sent_at`); se viene spostata a un altro giorno, ne riceverà uno
+nuovo.
 
 Ogni email ha i colori e il logo del ristorante, le richieste del cliente, l'**avviso dopo la
-prenotazione**, indirizzo e telefono e il link alla pagina. Il mittente mostra il nome del ristorante
-e le risposte arrivano all'email del ristorante (Dati del locale). L'esito di ogni invio (`sent`,
-`failed`, `not_configured`) resta nel registro modifiche. Configurazione: vedi `deploy.md`.
+prenotazione** (non nella cancellazione), indirizzo e telefono. Il mittente mostra il nome del
+ristorante e le risposte arrivano all'email del ristorante (Dati del locale). L'esito di ogni invio
+(`sent`, `failed`, `not_configured`) resta nel registro modifiche. Configurazione: vedi `deploy.md`.
+
+## Gestire la prenotazione dal link
+
+Se le regole lo permettono (**Il cliente può cancellare / modificare**, **Fino a quante ore prima**),
+le email hanno il pulsante **Gestisci la prenotazione**: porta a `/prenotazione/<codice>`, una pagina
+con i colori del ristorante dove il cliente vede la prenotazione e può:
+
+- **modificarla**: persone, giorno e ora tra quelli liberi online (il suo tavolo conta come libero). Se
+  le nuove persone richiedono la conferma manuale torna "in attesa"; i gruppi oltre il massimo online
+  devono chiamare;
+- **disdirla**: il tavolo torna libero.
+
+Dopo il termine (es. 2 ore prima) la pagina dice di contattare il ristorante. Il codice è l'id della
+prenotazione con una firma (HMAC con `JWT_SECRET`): non si indovina e non serve salvarlo. Lo staff
+riceve subito un avviso ("Prenotazione modificata/disdetta dal cliente") su tutti i dispositivi, e il
+registro modifiche annota `by: "guest"`.
 
 ## API
 
@@ -101,12 +129,14 @@ Senza autenticazione, sotto `/v1/public`, con limiti per IP (120 letture e 10 pr
   `closed` con il motivo)
 - `POST /restaurants/:slug/reservations`: prenota
 - `GET /media/:id`: immagini
+- `GET /bookings/:token`, `GET /bookings/:token/availability?date&partySize`,
+  `POST /bookings/:token/change` (`{ date, time, partySize }`), `POST /bookings/:token/cancel`: la
+  prenotazione del cliente dal link nelle email
 
 Per lo staff: `GET`/`PATCH /restaurants/:id/booking-page` e `POST /restaurants/:id/media`
 (`{ dataUrl }`).
 
 ## Da fare
 
-Link nell'email per modificare o disdire, email per le prenotazioni inserite dallo staff e per le
-cancellazioni, promemoria il giorno prima, pagina in inglese, dominio personalizzato del ristorante,
-QR code da stampare.
+Pagina ed email in inglese, dominio personalizzato del ristorante, QR code da stampare, orario del
+promemoria scelto dal ristorante.

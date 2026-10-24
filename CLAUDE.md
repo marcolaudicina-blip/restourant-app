@@ -77,6 +77,13 @@ pnpm db:migrate      # applies migrations to $DATABASE_URL
 - **Email** goes through `deps.mailer` (lib/mailer.ts: Resend when `RESEND_API_KEY` + `EMAIL_FROM`
   are set, otherwise disabled; tests use the memory mailer, `ctx.sentEmails`). Booking emails are in
   modules/notifications: `sendBookingEmail` never throws and records the outcome in the audit log.
+  Staff routes call `emailAfterStaffChange` (policy `emailStaffBookings`). Emails carry the guest's
+  "manage" link `/prenotazione/<id>.<hmac>` (`TokenService.signBooking`, nothing stored), served by
+  modules/public/guest-booking.service.ts (view, move, cancel within `cancellationNoticeHours`);
+  guest actions are audited with `by: "guest"` and show up in `getActivity().guestChanges`.
+- **Reminders** (modules/reminders): Vercel Cron (`apps/web/vercel.json`) → `/api/cron/reminders` →
+  `POST /v1/internal/reminders` with `Authorization: Bearer $CRON_SECRET`; one per booking
+  (`reminder_sent_at`, reset when the date changes).
 - **Team and accounts** (modules/team, modules/auth/account.service.ts): owners/managers invite by
   one-time link (`invitations`, only SHA-256 of tokens stored), managers handle staff only. Password
   reset by email (1 h) or by a manager's link (24 h). `users.session_version` is in every JWT

@@ -40,6 +40,7 @@ const app = await buildApp({
     // Demo bookings never email anyone.
     mailer: disabledMailer,
     publicUrl: null,
+    cronSecret: null,
   },
   rateLimit: false,
 });

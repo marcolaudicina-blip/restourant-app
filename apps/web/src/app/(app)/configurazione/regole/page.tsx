@@ -26,6 +26,8 @@ function RulesForm({ policy }: { policy: BookingPolicy }) {
     guestCanModify: policy.guestCanModify,
     requirePhone: policy.requirePhone,
     requireEmail: policy.requireEmail,
+    emailStaffBookings: policy.emailStaffBookings,
+    sendReminders: policy.sendReminders,
   });
   const [confirmationMode, setConfirmationMode] = useState(policy.confirmationMode);
   const flag = (name: keyof typeof flags) => ({
@@ -161,11 +163,14 @@ function RulesForm({ policy }: { policy: BookingPolicy }) {
         </Card>
 
         <Card>
-          <CardHeader title="Modifiche e cancellazioni" />
+          <CardHeader
+            title="Modifiche e cancellazioni"
+            description="Il cliente lo fa dal pulsante “Gestisci la prenotazione” nelle email: lo staff riceve un avviso."
+          />
           <div className="grid gap-5 p-5 md:grid-cols-2">
             <Switch label="Il cliente può cancellare" {...flag("guestCanCancel")} />
             <Switch label="Il cliente può modificare" {...flag("guestCanModify")} />
-            <Field label="Fino a quante ore prima">
+            <Field label="Fino a quante ore prima" hint="Dopo, il cliente deve contattare il ristorante">
               {(id) => (
                 <Input
                   id={id}
@@ -176,6 +181,25 @@ function RulesForm({ policy }: { policy: BookingPolicy }) {
                 />
               )}
             </Field>
+          </div>
+        </Card>
+
+        <Card>
+          <CardHeader
+            title="Email ai clienti"
+            description="Partono solo se il cliente ha lasciato l'email. Le prenotazioni online ricevono sempre la conferma."
+          />
+          <div className="grid gap-5 p-5 md:grid-cols-2">
+            <Switch
+              label="Avvisa delle prenotazioni gestite dallo staff"
+              description="Conferma quando inserite una prenotazione, e un'email se la spostate o la cancellate."
+              {...flag("emailStaffBookings")}
+            />
+            <Switch
+              label="Promemoria il giorno prima"
+              description="Ogni mattina, ai clienti con prenotazione confermata per il giorno dopo."
+              {...flag("sendReminders")}
+            />
           </div>
         </Card>
 

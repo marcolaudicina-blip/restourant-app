@@ -18,9 +18,10 @@ storico modifiche.
    personale con inviti e ruoli. Da fare: app per telefono
 4. ✅ **Pagina di prenotazione pubblica** con colori, logo, copertina e foto del locale, link da
    condividere, pulsante e modulo da inserire nel sito (vedi `pagina-prenotazione.md`). Da fare:
-   link per modificare o disdire, versione in inglese, QR code
-5. 🔄 **Email**: conferma e richiesta ricevuta per le prenotazioni online, con l'avviso del ristorante
-   (Resend). Da fare: promemoria, modifica e cancellazione, prenotazioni inserite dallo staff
+   versione in inglese, QR code
+5. ✅ **Email** (Resend): conferma e richiesta ricevuta per le prenotazioni online con l'avviso del
+   ristorante, prenotazioni inserite, spostate o cancellate dallo staff, promemoria il giorno prima,
+   link "Gestisci la prenotazione" per modificare o disdire online con avviso allo staff
 6. ✅ **Scheda cliente**: creata in automatico dalle prenotazioni e riconosciuta dal telefono, note
    permanenti, etichette, visite / coperti / no-show / cancellazioni, storico, cancellazione con
    anonimizzazione (GDPR), importazione di clienti e prenotazioni da CSV (Superb e altri)

@@ -1,4 +1,10 @@
+import { createHmac } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
+
+/** Same as playwright.config.ts: signs the guest's link like the API does (TokenService.signBooking). */
+const JWT_SECRET = "e2e-secret-e2e-secret-e2e-secret-e2e";
+const bookingToken = (id: string) =>
+  `${id}.${createHmac("sha256", JWT_SECRET).update(`booking:${id}`).digest("base64url").slice(0, 22)}`;
 
 /** Next Saturday from today: the trattoria template serves dinner Tuesday to Sunday. */
 function nextSaturday(): string {
@@ -323,6 +329,63 @@ test("imports guests and bookings from another system's CSV", async ({ page }, t
   const anna = page.getByRole("listitem").filter({ hasText: "Anna Neri" });
   await expect(anna).toContainText("Tavolo T7");
   await expect(anna).toContainText("VIP");
+});
+
+test("a guest moves and cancels their booking from the email link", async ({ page, browser }, testInfo) => {
+  await register(page, "Trattoria Ospite");
+  await page.getByRole("button", { name: /Trattoria/ }).click();
+  await page.getByRole("button", { name: "Usa questo modello" }).click();
+  await expect(page.getByRole("heading", { name: "Configurazione" })).toBeVisible();
+
+  // A booking from the public page, as a guest would make it.
+  const date = nextSaturday();
+  const me = (await (await page.request.get("/api/v1/auth/me")).json()).data;
+  const restaurantId = me.memberships[0].restaurantId as string;
+  const { slug } = (await (await page.request.get(`/api/v1/restaurants/${restaurantId}/booking-page`)).json())
+    .data;
+  const created = await page.request.post(`/api/v1/public/restaurants/${slug}/reservations`, {
+    data: {
+      date,
+      time: "20:00",
+      partySize: 2,
+      guestName: "Lucia Verdi",
+      guestPhone: "347 111 2222",
+      guestEmail: "lucia@example.com",
+      guestNote: null,
+      privacyAccepted: true,
+    },
+  });
+  expect(created.status()).toBe(201);
+  const { id } = (await created.json()).data;
+
+  // Staff keep the day open: they will hear about the guest's changes.
+  await page.goto(`/prenotazioni?data=${date}`);
+  await expect(page.getByRole("listitem").filter({ hasText: "Lucia Verdi" })).toContainText("20:00");
+
+  const guestContext = await browser.newContext();
+  const guest = await guestContext.newPage();
+  await guest.goto(`/prenotazione/${bookingToken(id)}`);
+  await expect(guest.getByRole("heading", { name: "Ciao Lucia" })).toBeVisible();
+  await expect(guest.getByText("Confermata")).toBeVisible();
+
+  await guest.getByRole("button", { name: "Modifica" }).click();
+  await guest.getByRole("button", { name: "4", exact: true }).click();
+  await guest.getByRole("button", { name: longDate(date), exact: true }).click();
+  await guest.getByRole("button", { name: "21:00", exact: true }).click();
+  await guest.getByRole("button", { name: /^Conferma:/ }).click();
+  await expect(guest.getByText(/^Prenotazione modificata\./)).toBeVisible();
+  await expect(guest.getByText("4 persone")).toBeVisible();
+  await guest.screenshot({ path: testInfo.outputPath("14-gestisci-prenotazione.png"), fullPage: true });
+
+  await guest.getByRole("button", { name: "Disdici" }).click();
+  await guest.getByRole("button", { name: "Sì, disdici" }).click();
+  await expect(guest.getByText(/^Prenotazione cancellata\./)).toBeVisible();
+  await expect(guest.getByRole("link", { name: "Prenota di nuovo" })).toBeVisible();
+  await guestContext.close();
+
+  const alert = page.getByRole("status").filter({ hasText: "Prenotazione disdetta dal cliente" });
+  await expect(alert).toContainText("Lucia Verdi", { timeout: 15_000 });
+  await page.screenshot({ path: testInfo.outputPath("15-avviso-disdetta.png") });
 });
 
 test("login, wrong password and logout", async ({ page }) => {

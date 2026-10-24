@@ -322,7 +322,9 @@ describe("confirmation notice and emails", () => {
     // The restaurant's words are escaped and keep their line breaks.
     expect(email.html).toContain("15 minuti.<br>In caso di ritardo chiamaci &lt;sempre&gt;.");
     expect(email.html).toContain("background:#7a1f2b");
-    expect(email.html).toContain("https://app.test/prenota/");
+    // The guest can manage the booking from their own link.
+    expect(email.html).toMatch(/https:\/\/app\.test\/prenotazione\/[0-9a-f-]{36}\.[\w-]{22}/);
+    expect(email.text).toContain("Puoi modificare o disdire la prenotazione online fino a 2 ore prima");
 
     // The outcome is kept in the restaurant's audit log.
     const log = (await owner.api.get(`${owner.base}/audit-log?limit=5`)).body.data;

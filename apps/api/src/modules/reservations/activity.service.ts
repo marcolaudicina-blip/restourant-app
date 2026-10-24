@@ -1,6 +1,6 @@
-import { reservations } from "@restourant/db";
+import { auditLog, reservations } from "@restourant/db";
 import { instantToLocal, normalizeTime } from "@restourant/shared";
-import { and, asc, eq, gt, gte, max } from "drizzle-orm";
+import { and, asc, eq, gt, gte, isNull, max, sql } from "drizzle-orm";
 import type { TenantContext } from "../../lib/context.js";
 import { getRestaurant } from "../restaurants/restaurants.service.js";
 
@@ -34,7 +34,7 @@ export async function getActivity(ctx: TenantContext, since: Date | null, now: D
   const restaurant = await getRestaurant(ctx);
   const today = instantToLocal(now, restaurant.timezone).date;
 
-  const [[last], created, pending] = await Promise.all([
+  const [[last], created, pending, byGuests] = await Promise.all([
     ctx.db
       .select({ at: max(reservations.updatedAt) })
       .from(reservations)
@@ -53,6 +53,24 @@ export async function getActivity(ctx: TenantContext, since: Date | null, now: D
       .where(and(scope, eq(reservations.status, "requested"), gte(reservations.date, today)))
       .orderBy(asc(reservations.startsAt))
       .limit(MAX_PENDING),
+    // Changes guests made themselves from the link in their emails (see guest-booking.service).
+    since
+      ? ctx.db
+          .select({ ...brief, cancelled: sql<boolean>`${auditLog.changes}->'status'->>'to' = 'cancelled'` })
+          .from(auditLog)
+          .innerJoin(reservations, eq(reservations.id, auditLog.entityId))
+          .where(
+            and(
+              eq(auditLog.restaurantId, ctx.restaurantId),
+              eq(auditLog.entity, "reservation"),
+              isNull(auditLog.actorUserId),
+              gt(auditLog.createdAt, since),
+              sql`${auditLog.changes}->>'by' = 'guest'`,
+            ),
+          )
+          .orderBy(asc(auditLog.createdAt))
+          .limit(MAX_NEW)
+      : Promise.resolve([]),
   ]);
 
   return {
@@ -61,5 +79,9 @@ export async function getActivity(ctx: TenantContext, since: Date | null, now: D
     lastChangeAt: last?.at?.toISOString() ?? null,
     newOnline: created.map(toBrief),
     pendingRequests: pending.map(toBrief),
+    guestChanges: byGuests.map(({ cancelled, ...row }) => ({
+      ...toBrief(row),
+      kind: cancelled ? ("cancelled" as const) : ("updated" as const),
+    })),
   };
 }
