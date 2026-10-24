@@ -13,6 +13,8 @@ export const PERMISSIONS = {
   "guests.write": ["owner", "manager", "staff"],
   /** Erasing a guest (GDPR right to be forgotten). */
   "guests.delete": ["owner", "manager"],
+  /** Figures of the restaurant (covers, channels, no-shows...). */
+  "stats.read": ["owner", "manager"],
   /** History of who changed what. */
   "audit.read": ["owner", "manager"],
   /** Invite colleagues, change their role, remove them (managers only for staff). */

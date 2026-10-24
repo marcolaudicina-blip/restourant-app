@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import {
+  BarChart3,
   CalendarDays,
   CircleUserRound,
   Contact,
@@ -18,7 +19,13 @@ import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { ROLE_LABELS } from "@/lib/labels";
 import { useMe } from "@/lib/queries";
-import { rememberRestaurant, rememberedRestaurant, RestaurantProvider } from "@/lib/restaurant";
+import {
+  rememberRestaurant,
+  rememberedRestaurant,
+  RestaurantProvider,
+  useRestaurant,
+} from "@/lib/restaurant";
+import type { Permission } from "@restourant/shared";
 import type { Restaurant } from "@/lib/types";
 import { ActivityProvider, usePendingRequests } from "./activity";
 import { ProductLogo } from "./product-logo";
@@ -26,10 +33,24 @@ import { Button } from "./ui/button";
 import { EmptyState } from "./ui/card";
 import { PageLoader } from "./ui/spinner";
 
-const NAV = [
+const NAV: {
+  href: string;
+  label: string;
+  icon: typeof CalendarDays;
+  permission?: Permission;
+  /** Left out of the phone tab bar (reachable from the account page). */
+  desktopOnly?: boolean;
+}[] = [
   { href: "/prenotazioni", label: "Prenotazioni", icon: CalendarDays },
   { href: "/sala", label: "Sala", icon: LayoutGrid },
   { href: "/clienti", label: "Clienti", icon: Contact },
+  {
+    href: "/statistiche",
+    label: "Statistiche",
+    icon: BarChart3,
+    permission: "stats.read",
+    desktopOnly: true,
+  },
   { href: "/configurazione", label: "Configurazione", icon: Settings },
 ];
 /** On phones there is no sidebar footer: the account gets a tab. */
@@ -144,9 +165,11 @@ export function AppShell({ children }: { children: ReactNode }) {
 function Nav({ className, compact = false }: { className?: string; compact?: boolean }) {
   const pathname = usePathname();
   const pending = usePendingRequests().length;
+  const { can } = useRestaurant();
+  const items = NAV.filter((n) => (!n.permission || can(n.permission)) && !(compact && n.desktopOnly));
   return (
     <div className={cn("flex gap-1", className)}>
-      {(compact ? [...NAV, ...MOBILE_EXTRA] : NAV).map(({ href, label, icon: Icon }) => {
+      {(compact ? [...items, ...MOBILE_EXTRA] : items).map(({ href, label, icon: Icon }) => {
         const active = pathname.startsWith(href);
         return (
           <Link

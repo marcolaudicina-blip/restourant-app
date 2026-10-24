@@ -1,5 +1,7 @@
 "use client";
 
+import { BarChart3 } from "lucide-react";
+import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, PageHeader } from "@/components/ui/card";
@@ -8,9 +10,11 @@ import { useToast } from "@/components/ui/toast";
 import { api, describeError } from "@/lib/api";
 import { ROLE_LABELS } from "@/lib/labels";
 import { useMe } from "@/lib/queries";
+import { useRestaurant } from "@/lib/restaurant";
 
 export default function AccountPage() {
   const me = useMe();
+  const { can } = useRestaurant();
   const toast = useToast();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -43,6 +47,14 @@ export default function AccountPage() {
   return (
     <>
       <PageHeader title="Il mio account" />
+      {can("stats.read") && (
+        <Link
+          href="/statistiche"
+          className="mb-4 flex max-w-3xl items-center gap-2 rounded-xl border border-line bg-surface px-4 py-3 text-sm font-medium hover:bg-canvas md:hidden"
+        >
+          <BarChart3 className="h-4 w-4 text-brand-700" /> Statistiche del ristorante
+        </Link>
+      )}
       <div className="grid max-w-3xl gap-5">
         <Card className="p-5">
           <p className="text-lg font-semibold">{me.data?.user.fullName}</p>

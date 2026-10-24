@@ -144,6 +144,15 @@ test("from sign-up to a full service", async ({ page, browser }, testInfo) => {
   await shot("03c-storico");
   await editDialog.getByRole("button", { name: "Annulla" }).click();
 
+  // Statistics: the two bookings, up to the day they are for.
+  await page.getByRole("link", { name: "Statistiche" }).first().click();
+  await expect(page.getByRole("heading", { name: "Statistiche" })).toBeVisible();
+  await page.getByLabel("Al", { exact: true }).fill(date);
+  await expect(page.getByText("Coperti", { exact: true }).first().locator("..")).toContainText("10");
+  await expect(page.getByRole("heading", { name: "Coperti per giorno" })).toBeVisible();
+  await shot("03d-statistiche");
+  await page.goto(`/prenotazioni?data=${date}`);
+
   // Staff bookings carry no channel mark; the "online only" filter is empty until guests book online.
   await expect(page.getByRole("listitem").filter({ hasText: "Rossi" })).not.toContainText("Online");
   await page.getByRole("button", { name: "Solo online" }).click();

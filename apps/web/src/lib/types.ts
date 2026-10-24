@@ -381,3 +381,34 @@ export type AdminRestaurantDetail = {
   supportActive: boolean;
   recentActivity: { entity: string; action: string; createdAt: string; actor: string | null }[];
 };
+
+export type Stats = {
+  from: string;
+  to: string;
+  totals: {
+    bookings: number;
+    covers: number;
+    noShows: number;
+    cancelled: number;
+    online: number;
+    walkIns: number;
+    noShowRate: number;
+    onlineShare: number;
+    avgParty: number;
+    avgLeadDaysOnline: number | null;
+  };
+  previous: {
+    from: string;
+    to: string;
+    bookings: number;
+    covers: number;
+    noShows: number;
+    cancelled: number;
+  };
+  byDay: { date: string; bookings: number; covers: number }[];
+  byWeekday: { weekday: number; days: number; avgCovers: number }[];
+  byHour: { hour: number; covers: number }[];
+  byChannel: { channel: "online" | "staff" | "walk_in"; bookings: number; covers: number }[];
+  topGuests: { guestId: string; name: string; visits: number; covers: number }[];
+  reviews: { count: number; average: number | null };
+};
