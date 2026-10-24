@@ -18,6 +18,7 @@ const app = await buildApp({
     mailer: mailerFromConfig(config.email),
     publicUrl: config.publicUrl,
     cronSecret: config.cronSecret,
+    platformAdmins: config.platformAdmins,
   },
   corsOrigins: config.corsOrigins,
   trustProxy: config.trustProxy,

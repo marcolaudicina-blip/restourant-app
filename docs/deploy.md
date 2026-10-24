@@ -39,6 +39,7 @@ va tolto. Quando `twentyreserve.com` diventer√† il sito di presentazione baster√
 | `RESEND_API_KEY`                        | chiave API di [Resend](https://resend.com) per le email ai clienti                            |
 | `EMAIL_FROM`                            | mittente su un dominio verificato in Resend: `TwentyReserve <prenotazioni@twentyreserve.com>` |
 | `APP_URL`                               | `https://app.twentyreserve.com`: indirizzo per link e logo nelle email                        |
+| `PLATFORM_ADMIN_EMAILS`                 | email (separate da virgola) dello staff TwentyReserve che vede il pannello Admin (`admin.md`) |
 | `CRON_SECRET`                           | stringa casuale di almeno 16 caratteri: autorizza il job dei promemoria (Vercel Cron)         |
 
 Senza `RESEND_API_KEY` ed `EMAIL_FROM` le email non partono (le prenotazioni funzionano comunque, e il

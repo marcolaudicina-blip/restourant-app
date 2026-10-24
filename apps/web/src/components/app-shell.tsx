@@ -1,7 +1,16 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { CalendarDays, CircleUserRound, Contact, LayoutGrid, LogOut, Settings } from "lucide-react";
+import {
+  CalendarDays,
+  CircleUserRound,
+  Contact,
+  LayoutGrid,
+  LifeBuoy,
+  LogOut,
+  Settings,
+  ShieldCheck,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
@@ -90,7 +99,17 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </p>
               )}
             </div>
-            <Nav className="mt-4 flex-1 flex-col px-3" />
+            <Nav className="mt-4 flex-col px-3" />
+            <div className="flex-1 px-3">
+              {me.data?.platformAdmin && (
+                <Link
+                  href="/admin"
+                  className="mt-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted hover:bg-black/5 hover:text-ink"
+                >
+                  <ShieldCheck className="h-5 w-5" /> Admin
+                </Link>
+              )}
+            </div>
             <div className="border-t border-line p-3">
               <Link href="/account" className="block rounded-lg px-2 py-1 hover:bg-black/5">
                 <p className="truncate text-sm font-medium">{me.data?.user.fullName}</p>
@@ -102,6 +121,13 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
           </aside>
 
+          {membership.support && (
+            <SupportBanner
+              restaurantId={membership.restaurantId}
+              name={restaurant.data.name}
+              backTo={memberships.find((m) => !m.support)?.restaurantId ?? null}
+            />
+          )}
           <main className="mx-auto max-w-7xl px-4 pb-24 pt-5 md:px-8 md:pb-10 md:pt-8 print:max-w-none print:p-0">
             {children}
           </main>
@@ -147,6 +173,36 @@ function Nav({ className, compact = false }: { className?: string; compact?: boo
           </Link>
         );
       })}
+    </div>
+  );
+}
+
+/** TwentyReserve support working inside a customer's restaurant: always visible, one click to leave. */
+function SupportBanner({
+  restaurantId,
+  name,
+  backTo,
+}: {
+  restaurantId: string;
+  name: string;
+  backTo: string | null;
+}) {
+  const [leaving, setLeaving] = useState(false);
+  async function leave() {
+    setLeaving(true);
+    await api(`/admin/restaurants/${restaurantId}/support`, { method: "DELETE" }).catch(() => undefined);
+    if (backTo) rememberRestaurant(backTo);
+    window.location.href = "/admin";
+  }
+  return (
+    <div className="sticky top-0 z-20 flex flex-wrap items-center justify-center gap-3 bg-amber-100 px-4 py-2 text-sm text-amber-900 print:hidden">
+      <LifeBuoy className="h-4 w-4" />
+      <span>
+        Sei in <strong>{name}</strong> come assistenza TwentyReserve: il ristorante vede il tuo accesso.
+      </span>
+      <Button size="sm" variant="secondary" onClick={leave} loading={leaving}>
+        Esci dall&apos;assistenza
+      </Button>
     </div>
   );
 }

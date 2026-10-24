@@ -84,6 +84,9 @@ pnpm db:migrate      # applies migrations to $DATABASE_URL
 - **Reminders** (modules/reminders): Vercel Cron (`apps/web/vercel.json`) → `/api/cron/reminders` →
   `POST /v1/internal/reminders` with `Authorization: Bearer $CRON_SECRET`; one per booking
   (`reminder_sent_at`, reset when the date changes).
+- **Platform admin** (modules/admin, `/v1/admin/*`, web `/admin`): users whose email is in
+  `PLATFORM_ADMIN_EMAILS` (`deps.platformAdmins`); others get 404. Support access is a manager
+  membership with `support = true`, audited in the restaurant (`support_access`). See `docs/admin.md`.
 - **Team and accounts** (modules/team, modules/auth/account.service.ts): owners/managers invite by
   one-time link (`invitations`, only SHA-256 of tokens stored), managers handle staff only. Password
   reset by email (1 h) or by a manager's link (24 h). `users.session_version` is in every JWT

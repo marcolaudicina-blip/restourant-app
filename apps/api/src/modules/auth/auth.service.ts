@@ -6,7 +6,14 @@ import type { PasswordHasher } from "../../lib/passwords.js";
 import { slugify } from "../../lib/slug.js";
 
 export type PublicUser = { id: string; email: string; fullName: string };
-export type MembershipSummary = { restaurantId: string; restaurantName: string; slug: string; role: Role };
+export type MembershipSummary = {
+  restaurantId: string;
+  restaurantName: string;
+  slug: string;
+  role: Role;
+  /** Temporary access of TwentyReserve support. */
+  support: boolean;
+};
 
 const toPublicUser = (u: typeof users.$inferSelect): PublicUser => ({
   id: u.id,
@@ -77,6 +84,7 @@ export async function getProfile(db: Database, userId: string) {
     .select({
       restaurantId: memberships.restaurantId,
       role: memberships.role,
+      support: memberships.support,
       restaurantName: restaurants.name,
       slug: restaurants.slug,
     })

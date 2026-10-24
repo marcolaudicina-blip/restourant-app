@@ -20,7 +20,9 @@ type Row = { id: string; createdAt: string; updatedAt: string };
 
 export type Me = {
   user: { id: string; email: string; fullName: string };
-  memberships: { restaurantId: string; restaurantName: string; slug: string; role: Role }[];
+  memberships: { restaurantId: string; restaurantName: string; slug: string; role: Role; support: boolean }[];
+  /** TwentyReserve staff: sees /admin. */
+  platformAdmin: boolean;
 };
 
 export type Restaurant = RestaurantFields & Row & { slug: string };
@@ -221,7 +223,15 @@ export type GuestBookingView = {
 
 // Team -----------------------------------------------------------------------------------------
 
-export type TeamMember = { userId: string; fullName: string; email: string; role: Role; since: string };
+export type TeamMember = {
+  userId: string;
+  fullName: string;
+  email: string;
+  role: Role;
+  /** TwentyReserve support, in for assistance. */
+  support: boolean;
+  since: string;
+};
 export type PendingInvitation = {
   id: string;
   email: string;
@@ -249,4 +259,43 @@ export type Activity = {
   pendingRequests: ActivityBrief[];
   /** Bookings guests moved or cancelled themselves from the link in their emails. */
   guestChanges: (ActivityBrief & { kind: "cancelled" | "updated" })[];
+};
+
+// Platform admin ----------------------------------------------------------------------------------
+
+export type AdminOverview = {
+  restaurants: number;
+  newThisWeek: number;
+  users: number;
+  bookingsLast30Days: number;
+  onlineLast30Days: number;
+};
+
+export type AdminRestaurant = {
+  id: string;
+  name: string;
+  slug: string;
+  city: string | null;
+  createdAt: string;
+  onlineEnabled: boolean;
+  owner: { fullName: string; email: string } | null;
+  members: number;
+  bookingsLast30Days: number;
+  onlineLast30Days: number;
+  lastActivityAt: string | null;
+  trialDaysLeft: number;
+};
+
+export type AdminRestaurantDetail = {
+  id: string;
+  name: string;
+  slug: string;
+  email: string | null;
+  phone: string | null;
+  city: string | null;
+  createdAt: string;
+  upcomingBookings: number;
+  members: { userId: string; fullName: string; email: string; role: Role; support: boolean; since: string }[];
+  supportActive: boolean;
+  recentActivity: { entity: string; action: string; createdAt: string; actor: string | null }[];
 };

@@ -15,6 +15,8 @@ export type AppDeps = {
   publicUrl: string | null;
   /** Shared with the scheduler that runs internal jobs (reminders); null disables them. */
   cronSecret: string | null;
+  /** Lowercased emails of TwentyReserve staff allowed into the platform admin (see config). */
+  platformAdmins: string[];
 };
 
 declare module "fastify" {

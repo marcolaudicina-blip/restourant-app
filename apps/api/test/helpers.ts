@@ -30,6 +30,7 @@ export async function createTestApp(): Promise<TestContext> {
       mailer,
       publicUrl: "https://app.test",
       cronSecret: "test-cron-secret-0123456789",
+      platformAdmins: ["admin@twentyreserve.test"],
     },
     rateLimit: false,
   });

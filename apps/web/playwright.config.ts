@@ -14,6 +14,8 @@ const API_PORT = 3101;
 const WEB_PORT = 3100;
 const JWT_SECRET = "e2e-secret-e2e-secret-e2e-secret-e2e";
 const embeddedDatabase = process.env.E2E_DATABASE_URL;
+/** The platform admin of the e2e run (see the admin test). */
+const PLATFORM_ADMIN_EMAILS = "admin-desktop@twentyreserve.test,admin-tablet@twentyreserve.test";
 
 const standaloneApi = {
   command: "pnpm --filter @restourant/api exec tsx src/server.ts",
@@ -25,6 +27,7 @@ const standaloneApi = {
     PORT: String(API_PORT),
     LOG_LEVEL: "warn",
     TRUST_PROXY: "true",
+    PLATFORM_ADMIN_EMAILS,
   },
   reuseExistingServer: false,
   timeout: 60_000,
@@ -34,7 +37,7 @@ const web = {
   command: `pnpm exec next start --port ${WEB_PORT}`,
   url: `http://localhost:${WEB_PORT}/login`,
   env: embeddedDatabase
-    ? { DATABASE_URL: embeddedDatabase, JWT_SECRET, LOG_LEVEL: "warn" }
+    ? { DATABASE_URL: embeddedDatabase, JWT_SECRET, LOG_LEVEL: "warn", PLATFORM_ADMIN_EMAILS }
     : { API_URL: `http://localhost:${API_PORT}` },
   reuseExistingServer: false,
   timeout: 60_000,

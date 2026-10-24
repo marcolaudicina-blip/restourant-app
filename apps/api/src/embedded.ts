@@ -27,6 +27,7 @@ function getApp(): Promise<App> {
         mailer: mailerFromConfig(config.email),
         publicUrl: config.publicUrl,
         cronSecret: config.cronSecret,
+        platformAdmins: config.platformAdmins,
       },
       logger: { level: config.logLevel },
     });

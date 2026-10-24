@@ -28,6 +28,8 @@ const envSchema = z.object({
   APP_URL: z.url().optional(),
   /** Set by Vercel: the production domain, used when APP_URL is missing. */
   VERCEL_PROJECT_PRODUCTION_URL: z.string().optional(),
+  /** Emails of the platform admins (TwentyReserve staff), comma separated: they see /admin. */
+  PLATFORM_ADMIN_EMAILS: z.string().default(""),
   /** Authorizes scheduled jobs (Vercel Cron sends it as a bearer token). */
   CRON_SECRET: z.string().min(16).optional(),
   /** Apply pending migrations at startup. Production runs `pnpm db:migrate` as a release step instead. */
@@ -51,6 +53,7 @@ export type AppConfig = {
   /** e.g. https://app.example.com, without a trailing slash; null when unknown. */
   publicUrl: string | null;
   cronSecret: string | null;
+  platformAdmins: string[];
 };
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -75,5 +78,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       e.APP_URL?.replace(/\/$/, "") ??
       (e.VERCEL_PROJECT_PRODUCTION_URL ? `https://${e.VERCEL_PROJECT_PRODUCTION_URL}` : null),
     cronSecret: e.CRON_SECRET ?? null,
+    platformAdmins: e.PLATFORM_ADMIN_EMAILS.split(",")
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean),
   };
 }

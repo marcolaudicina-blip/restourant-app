@@ -42,6 +42,7 @@ export async function listTeam(ctx: TenantContext, now: Date) {
         fullName: users.fullName,
         email: users.email,
         role: memberships.role,
+        support: memberships.support,
         since: memberships.createdAt,
       })
       .from(memberships)

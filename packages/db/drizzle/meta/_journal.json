@@ -85,6 +85,13 @@
       "when": 1792847271246,
       "tag": "0011_reservation_locale",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792849250628,
+      "tag": "0012_membership_support",
+      "breakpoints": true
     }
   ]
 }

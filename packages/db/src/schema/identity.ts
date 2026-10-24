@@ -1,5 +1,15 @@
 import { sql } from "drizzle-orm";
-import { index, integer, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  index,
+  integer,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { primaryId, timestamps } from "./columns.js";
 import { roleEnum } from "./enums.js";
 import { restaurants } from "./restaurants.js";
@@ -29,6 +39,8 @@ export const memberships = pgTable(
       .notNull()
       .references(() => restaurants.id, { onDelete: "cascade" }),
     role: roleEnum().notNull(),
+    /** Temporary access of TwentyReserve support (platform admins), visible to the restaurant. */
+    support: boolean().notNull().default(false),
     ...timestamps,
   },
   (t) => [primaryKey({ columns: [t.userId, t.restaurantId] }), index().on(t.restaurantId)],

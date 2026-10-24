@@ -406,6 +406,46 @@ test("a guest moves and cancels their booking from the email link", async ({ pag
   await page.screenshot({ path: testInfo.outputPath("15-avviso-disdetta.png") });
 });
 
+test("the platform admin sees every restaurant and helps one as support", async ({
+  page,
+  browser,
+}, testInfo) => {
+  // A customer's restaurant.
+  const name = `Osteria Cliente ${Date.now()}`;
+  const customer = await browser.newPage();
+  await register(customer, name);
+  await expect(customer.getByRole("button", { name: /Trattoria/ })).toBeVisible();
+  await customer.close();
+
+  // One admin per viewport, listed in PLATFORM_ADMIN_EMAILS (playwright.config.ts): the two runs
+  // go in parallel and must not leave each other's support access.
+  const account = {
+    email: `admin-${testInfo.project.name}@twentyreserve.test`,
+    password: "password-lunga-123",
+  };
+  // Its own client address, so the sign-ups of the other tests don't hit its rate limit.
+  const headers = { "x-forwarded-for": `10.20.${testInfo.project.name.length}.${Date.now() % 250}` };
+  const signUp = await page.request.post("/api/session", {
+    headers,
+    data: { mode: "register", ...account, fullName: "Marco Admin", restaurantName: "TwentyReserve HQ" },
+  });
+  if (!signUp.ok()) {
+    const login = await page.request.post("/api/session", { headers, data: { mode: "login", ...account } });
+    expect(login.ok()).toBe(true);
+  }
+  await page.goto("/prenotazioni");
+  await page.getByRole("link", { name: "Admin", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Admin TwentyReserve" })).toBeVisible();
+  const row = page.getByRole("row").filter({ hasText: name });
+  await expect(row).toContainText("Prova: 30 gg");
+  await row.getByRole("button", { name: "Dettagli" }).click();
+  await page.getByRole("button", { name: "Entra come assistenza" }).click();
+  await expect(page.getByText("come assistenza TwentyReserve")).toContainText(name);
+  await page.getByRole("button", { name: "Esci dall'assistenza" }).click();
+  await expect(page.getByRole("heading", { name: "Admin TwentyReserve" })).toBeVisible();
+  await expect(page.getByText("come assistenza TwentyReserve")).toHaveCount(0);
+});
+
 test("login, wrong password and logout", async ({ page }) => {
   await page.goto("/prenotazioni");
   await expect(page).toHaveURL(/\/login/);

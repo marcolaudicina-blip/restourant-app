@@ -207,7 +207,9 @@ function MemberRow({
         </p>
         <p className="truncate text-sm text-muted">{member.email}</p>
       </div>
-      {editable ? (
+      {member.support ? (
+        <Badge className="bg-amber-100 text-amber-900">Assistenza TwentyReserve</Badge>
+      ) : editable ? (
         <>
           <Select
             aria-label={`Ruolo di ${member.fullName}`}

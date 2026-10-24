@@ -8,6 +8,7 @@ import {
 } from "@restourant/shared";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
+import { isPlatformAdmin } from "../admin/admin.service.js";
 import { authenticate } from "../../plugins/auth.js";
 import {
   acceptInvitation,
@@ -46,7 +47,10 @@ export const authRoutes: FastifyPluginAsyncZod = async (app) => {
 
   app.get("/auth/me", async (request) => {
     const { userId } = await authenticate(request);
-    return { data: await getProfile(db, userId) };
+    const profile = await getProfile(db, userId);
+    return {
+      data: { ...profile, platformAdmin: isPlatformAdmin(app.deps.platformAdmins, profile.user.email) },
+    };
   });
 
   // Invitations: shown and accepted from the link, without being signed in.

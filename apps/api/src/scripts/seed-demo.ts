@@ -41,6 +41,7 @@ const app = await buildApp({
     mailer: disabledMailer,
     publicUrl: null,
     cronSecret: null,
+    platformAdmins: [],
   },
   rateLimit: false,
 });
