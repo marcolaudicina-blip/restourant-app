@@ -31,6 +31,7 @@ function RulesForm({ policy }: { policy: BookingPolicy }) {
     requireEmail: policy.requireEmail,
     emailStaffBookings: policy.emailStaffBookings,
     sendReminders: policy.sendReminders,
+    waitlistEnabled: policy.waitlistEnabled,
   });
   const [confirmationMode, setConfirmationMode] = useState(policy.confirmationMode);
   const [limits, setLimits] = useState<OnlinePartyLimit[]>(policy.onlinePartyLimits);
@@ -212,6 +213,11 @@ function RulesForm({ policy }: { policy: BookingPolicy }) {
               label="Promemoria il giorno prima"
               description="Ogni mattina, ai clienti con prenotazione confermata per il giorno dopo."
               {...flag("sendReminders")}
+            />
+            <Switch
+              label="Lista d'attesa sulla pagina di prenotazione"
+              description="Nei giorni pieni il cliente può mettersi in lista: se qualcuno disdice gli mandiamo un'email per prenotare."
+              {...flag("waitlistEnabled")}
             />
           </div>
         </Card>

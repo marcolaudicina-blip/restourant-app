@@ -50,6 +50,7 @@ export const bookingPolicies = pgTable(
       .$type<{ daysOfWeek: number[]; from: string; to: string; maxParty: number }[]>()
       .notNull()
       .default([]),
+    waitlistEnabled: boolean().notNull().default(true),
     ...timestamps,
   },
   (t) => [

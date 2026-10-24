@@ -1,4 +1,4 @@
-import { auditLog, reservations } from "@restourant/db";
+import { auditLog, reservations, waitlistEntries } from "@restourant/db";
 import { instantToLocal, normalizeTime } from "@restourant/shared";
 import { and, asc, eq, gt, gte, isNull, max, sql } from "drizzle-orm";
 import type { TenantContext } from "../../lib/context.js";
@@ -34,11 +34,15 @@ export async function getActivity(ctx: TenantContext, since: Date | null, now: D
   const restaurant = await getRestaurant(ctx);
   const today = instantToLocal(now, restaurant.timezone).date;
 
-  const [[last], created, pending, byGuests] = await Promise.all([
+  const [[last], [lastWaitlist], created, pending, byGuests, joined] = await Promise.all([
     ctx.db
       .select({ at: max(reservations.updatedAt) })
       .from(reservations)
       .where(scope),
+    ctx.db
+      .select({ at: max(waitlistEntries.updatedAt) })
+      .from(waitlistEntries)
+      .where(eq(waitlistEntries.restaurantId, ctx.restaurantId)),
     since
       ? ctx.db
           .select(brief)
@@ -71,17 +75,43 @@ export async function getActivity(ctx: TenantContext, since: Date | null, now: D
           .orderBy(asc(auditLog.createdAt))
           .limit(MAX_NEW)
       : Promise.resolve([]),
+    // Guests who joined a waiting list from the booking page.
+    since
+      ? ctx.db
+          .select({
+            id: waitlistEntries.id,
+            guestName: waitlistEntries.guestName,
+            partySize: waitlistEntries.partySize,
+            date: waitlistEntries.date,
+          })
+          .from(waitlistEntries)
+          .where(
+            and(
+              eq(waitlistEntries.restaurantId, ctx.restaurantId),
+              eq(waitlistEntries.channel, "online"),
+              gt(waitlistEntries.createdAt, since),
+            ),
+          )
+          .orderBy(asc(waitlistEntries.createdAt))
+          .limit(MAX_NEW)
+      : Promise.resolve([]),
   ]);
+  const lastChange = [last?.at, lastWaitlist?.at].reduce<Date | null>(
+    (latest, at) => (at && (!latest || at > latest) ? at : latest),
+    null,
+  );
 
   return {
     /** Pass it back as `since` next time. */
     serverTime: new Date().toISOString(),
-    lastChangeAt: last?.at?.toISOString() ?? null,
+    /** Latest change to bookings or waiting lists. */
+    lastChangeAt: lastChange?.toISOString() ?? null,
     newOnline: created.map(toBrief),
     pendingRequests: pending.map(toBrief),
     guestChanges: byGuests.map(({ cancelled, ...row }) => ({
       ...toBrief(row),
       kind: cancelled ? ("cancelled" as const) : ("updated" as const),
     })),
+    newWaitlist: joined,
   };
 }

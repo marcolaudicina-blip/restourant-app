@@ -44,16 +44,73 @@ export type BookingEmailInput = {
 
 export type RenderedEmail = { subject: string; html: string; text: string };
 
-const escape = (value: string) =>
+export const escape = (value: string) =>
   value.replace(
     /[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
   );
 
 /** Escaped, with line breaks kept (`white-space: pre-line` is not reliable in mail clients). */
-const paragraphs = (value: string) => escape(value.trim()).replace(/\r?\n/g, "<br>");
+export const paragraphs = (value: string) => escape(value.trim()).replace(/\r?\n/g, "<br>");
 
-const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+export const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+export const MUTED = "#6f6a62";
+
+type Palette = ReturnType<typeof brandPalette>;
+
+/** Label/value rows in a bordered box. */
+export function detailsTable(rows: [string, string][]) {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e7e4de;border-radius:12px;font-size:15px">
+${rows
+  .map(
+    ([label, value], i) =>
+      `<tr><td style="padding:12px 16px;color:${MUTED};${i ? "border-top:1px solid #e7e4de;" : ""}vertical-align:top">${label}</td><td align="right" style="padding:12px 16px;font-weight:600;${i ? "border-top:1px solid #e7e4de;" : ""}">${paragraphs(value)}</td></tr>`,
+  )
+  .join("\n")}
+</table>`;
+}
+
+export function button(palette: Palette, action: { label: string; url: string }) {
+  return `<div style="margin-top:20px"><a href="${escape(action.url)}" style="display:inline-block;background:${palette.brand};color:${palette.contrast};text-decoration:none;font-weight:600;padding:12px 22px;border-radius:999px">${escape(action.label)}</a></div>`;
+}
+
+/** The frame of every email to guests: the restaurant's colored header, a body and a footer. */
+export function emailShell(args: {
+  lang: "it" | "en";
+  subject: string;
+  palette: Palette;
+  logoUrl: string | null;
+  restaurantName: string;
+  body: string;
+  footer: string;
+  why: string;
+}) {
+  const { palette, logoUrl } = args;
+  return `<!doctype html>
+<html lang="${args.lang}">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(args.subject)}</title></head>
+<body style="margin:0;padding:0;background:#f6f5f2;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1d1b18">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f5f2;padding:24px 12px">
+<tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden">
+<tr><td style="background:${palette.brand};padding:28px 32px;color:${palette.contrast}">
+${logoUrl ? `<img src="${escape(logoUrl)}" width="56" height="56" alt="" style="display:block;width:56px;height:56px;border-radius:12px;background:#ffffff;object-fit:contain;margin-bottom:14px">` : ""}
+<div style="font-size:22px;font-weight:600;line-height:1.3">${escape(args.restaurantName)}</div>
+</td></tr>
+<tr><td style="padding:28px 32px 8px">
+${args.body}
+</td></tr>
+<tr><td style="padding:16px 32px 28px;font-size:14px;line-height:1.6;color:${MUTED}">
+${args.footer}
+</td></tr>
+</table>
+<p style="max-width:560px;margin:16px auto 0;font-size:12px;line-height:1.5;color:${MUTED}">${escape(args.why)}</p>
+</td></tr>
+</table>
+</body>
+</html>`;
+}
 
 type Copy = {
   subject: (name: string, when: string, time: string) => string;
@@ -213,30 +270,9 @@ export function renderBookingEmail(input: BookingEmailInput): RenderedEmail {
     : pageUrl
       ? { label: cancelled ? t.bookAgain : t.visitPage, url: `${pageUrl}?lang=${lang}` }
       : null;
-  const muted = "#6f6a62";
-
-  const html = `<!doctype html>
-<html lang="${lang}">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(subject)}</title></head>
-<body style="margin:0;padding:0;background:#f6f5f2;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1d1b18">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f5f2;padding:24px 12px">
-<tr><td align="center">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden">
-<tr><td style="background:${palette.brand};padding:28px 32px;color:${palette.contrast}">
-${logoUrl ? `<img src="${escape(logoUrl)}" width="56" height="56" alt="" style="display:block;width:56px;height:56px;border-radius:12px;background:#ffffff;object-fit:contain;margin-bottom:14px">` : ""}
-<div style="font-size:22px;font-weight:600;line-height:1.3">${escape(restaurant.name)}</div>
-</td></tr>
-<tr><td style="padding:28px 32px 8px">
-<h1 style="margin:0 0 8px;font-size:20px;line-height:1.3">${headline}</h1>
-<p style="margin:0 0 20px;font-size:15px;line-height:1.5;color:${muted}">${escape(intro)}</p>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e7e4de;border-radius:12px;font-size:15px">
-${details
-  .map(
-    ([label, value], i) =>
-      `<tr><td style="padding:12px 16px;color:${muted};${i ? "border-top:1px solid #e7e4de;" : ""}vertical-align:top">${label}</td><td align="right" style="padding:12px 16px;font-weight:600;${i ? "border-top:1px solid #e7e4de;" : ""}">${paragraphs(value)}</td></tr>`,
-  )
-  .join("\n")}
-</table>
+  const body = `<h1 style="margin:0 0 8px;font-size:20px;line-height:1.3">${headline}</h1>
+<p style="margin:0 0 20px;font-size:15px;line-height:1.5;color:${MUTED}">${escape(intro)}</p>
+${detailsTable(details)}
 ${
   note
     ? `<div style="margin-top:20px;background:${palette.soft};border-left:4px solid ${palette.brand};border-radius:8px;padding:14px 16px">
@@ -244,20 +280,21 @@ ${
 <div style="font-size:14px;line-height:1.6">${paragraphs(note)}</div>
 </div>`
     : ""
-}
-</td></tr>
-<tr><td style="padding:16px 32px 28px;font-size:14px;line-height:1.6;color:${muted}">
-${address ? `<div>${escape(address)}</div>` : ""}
+}`;
+  const footer = `${address ? `<div>${escape(address)}</div>` : ""}
 ${restaurant.phone ? `<div>${t.phone} <a href="tel:${escape(restaurant.phone.replace(/\s/g, ""))}" style="color:${palette.strong}">${escape(restaurant.phone)}</a></div>` : ""}
 <div style="margin-top:8px">${escape(contact)}</div>
-${action ? `<div style="margin-top:20px"><a href="${escape(action.url)}" style="display:inline-block;background:${palette.brand};color:${palette.contrast};text-decoration:none;font-weight:600;padding:12px 22px;border-radius:999px">${action.label}</a></div>` : ""}
-</td></tr>
-</table>
-<p style="max-width:560px;margin:16px auto 0;font-size:12px;line-height:1.5;color:${muted}">${escape(t.why(restaurant.name))}</p>
-</td></tr>
-</table>
-</body>
-</html>`;
+${action ? button(palette, action) : ""}`;
+  const html = emailShell({
+    lang,
+    subject,
+    palette,
+    logoUrl,
+    restaurantName: restaurant.name,
+    body,
+    footer,
+    why: t.why(restaurant.name),
+  });
 
   const text = [
     restaurant.name,

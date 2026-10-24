@@ -129,4 +129,5 @@ automatica fino a 4 persone). Si applicano solo a un locale ancora vuoto, poi si
 ## Da fare nelle prossime fasi
 
 Stati della prenotazione e colori, tre tipi di note (ospite, profilo, interne), notifiche email/SMS,
-garanzia con carta e caparre, lista d'attesa: vedi [roadmap](roadmap.md).
+garanzia con carta e caparre: vedi [roadmap](roadmap.md). La lista d'attesa (interruttore in Regole) è
+descritta in [pagina-prenotazione](pagina-prenotazione.md#lista-dattesa).

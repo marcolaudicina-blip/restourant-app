@@ -193,6 +193,7 @@ export async function getPublicAvailability(
       reason: offer.reason,
       message: DAY_REASON_MESSAGES[offer.reason],
       services: [],
+      waitlist: false,
     };
   }
   return {
@@ -204,7 +205,12 @@ export async function getPublicAvailability(
       serviceId: s.serviceId,
       name: s.name,
       times: s.slots.filter((slot) => slot.available).map((slot) => slot.time),
+      /** First and last arrival of the service, for the waiting list's time window. */
+      firstTime: s.slots[0]?.time ?? null,
+      lastTime: s.slots.at(-1)?.time ?? null,
     })),
+    /** Whether the guest may join the waiting list of this day (when it is full). */
+    waitlist: offer.mode === "book" && floor.policy.waitlistEnabled,
   };
 }
 

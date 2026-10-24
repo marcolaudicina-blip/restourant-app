@@ -9,6 +9,8 @@ import {
   SEATING_MODES,
   SUPPORTED_LOCALES,
   TABLE_SHAPES,
+  WAITLIST_CHANNELS,
+  WAITLIST_STATUSES,
 } from "@restourant/shared";
 import { pgEnum } from "drizzle-orm/pg-core";
 
@@ -22,3 +24,5 @@ export const exceptionKindEnum = pgEnum("exception_kind", EXCEPTION_KINDS);
 export const exceptionScopeEnum = pgEnum("exception_scope", EXCEPTION_SCOPES);
 export const reservationStatusEnum = pgEnum("reservation_status", RESERVATION_STATUSES);
 export const reservationChannelEnum = pgEnum("reservation_channel", RESERVATION_CHANNELS);
+export const waitlistStatusEnum = pgEnum("waitlist_status", WAITLIST_STATUSES);
+export const waitlistChannelEnum = pgEnum("waitlist_channel", WAITLIST_CHANNELS);

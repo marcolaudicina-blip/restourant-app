@@ -7,3 +7,4 @@ export * from "./guests.js";
 export * from "./reservations.js";
 export * from "./audit.js";
 export * from "./booking-page.js";
+export * from "./waitlist.js";

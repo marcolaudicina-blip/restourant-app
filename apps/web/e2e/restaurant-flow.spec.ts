@@ -14,6 +14,10 @@ function nextSaturday(): string {
 }
 
 async function register(page: Page, restaurantName: string) {
+  // A client address of its own: sign-ups are rate limited per address, and tests run in parallel.
+  await page.setExtraHTTPHeaders({
+    "x-forwarded-for": `10.30.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`,
+  });
   await page.goto("/registrati");
   await page.getByLabel("Nome del ristorante").fill(restaurantName);
   await page.getByLabel("Il tuo nome").fill("Marco");
@@ -112,7 +116,7 @@ test("from sign-up to a full service", async ({ page, browser }, testInfo) => {
   await page.mouse.click(visible.x + visible.width / 2, lane.y + lane.height / 2);
   await expect(page.getByRole("dialog", { name: "Nuova prenotazione" })).toContainText("T3");
   await page.getByRole("dialog").getByRole("button", { name: "Annulla" }).click();
-  await page.getByRole("button", { name: "Lista" }).click();
+  await page.getByRole("button", { name: "Lista", exact: true }).click();
   await expect(page.getByRole("listitem").filter({ hasText: "Bianchi" })).toContainText("21:00");
 
   // Staff bookings carry no channel mark; the "online only" filter is empty until guests book online.
@@ -404,6 +408,66 @@ test("a guest moves and cancels their booking from the email link", async ({ pag
   const alert = page.getByRole("status").filter({ hasText: "Prenotazione disdetta dal cliente" });
   await expect(alert).toContainText("Lucia Verdi", { timeout: 15_000 });
   await page.screenshot({ path: testInfo.outputPath("15-avviso-disdetta.png") });
+});
+
+test("a guest joins the waiting list of a full day, and staff book them", async ({
+  page,
+  browser,
+}, testInfo) => {
+  await register(page, "Trattoria Piena");
+  await page.getByRole("button", { name: /Trattoria/ }).click();
+  await page.getByRole("button", { name: "Usa questo modello" }).click();
+  await expect(page.getByRole("heading", { name: "Configurazione" })).toBeVisible();
+
+  // Online, only one person per table all day: the booking page has no free time for three.
+  const me = (await (await page.request.get("/api/v1/auth/me")).json()).data;
+  const base = `/api/v1/restaurants/${me.memberships[0].restaurantId}`;
+  const rule = { daysOfWeek: [1, 2, 3, 4, 5, 6, 7], from: "00:00", to: "23:59", maxParty: 1 };
+  expect(
+    (await page.request.patch(`${base}/booking-policy`, { data: { onlinePartyLimits: [rule] } })).ok(),
+  ).toBe(true);
+  const { slug } = (await (await page.request.get(`${base}/booking-page`)).json()).data;
+  const date = nextSaturday();
+  await page.goto(`/prenotazioni?data=${date}`);
+
+  // The link in the waiting list emails opens the right day and party size.
+  const guestContext = await browser.newContext();
+  const guest = await guestContext.newPage();
+  await guest.goto(`/prenota/${slug}?data=${date}&persone=3`);
+  await expect(guest.getByRole("button", { name: longDate(date), exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(guest.getByRole("button", { name: "3", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await guest.getByRole("button", { name: "Mettiti in lista d'attesa" }).click();
+  await guest.getByLabel("Nome e cognome").fill("Anna Neri");
+  await guest.getByLabel("Telefono").fill("347 555 6666");
+  await guest.getByLabel("Email").fill("anna@example.com");
+  await guest.getByRole("checkbox").check();
+  await guest.getByRole("button", { name: "Mettimi in lista" }).click();
+  await expect(guest.getByRole("heading", { name: "Sei in lista d'attesa" })).toBeVisible();
+  await guest.screenshot({ path: testInfo.outputPath("15b-lista-attesa-cliente.png"), fullPage: true });
+  await guestContext.close();
+
+  // Staff see the request (alert and panel) and book the guest, who leaves the list.
+  await expect(
+    page.getByRole("status").filter({ hasText: "Nuova richiesta in lista d'attesa" }),
+  ).toContainText("Anna Neri", { timeout: 15_000 });
+  const entry = page.getByRole("listitem").filter({ hasText: "Anna Neri" });
+  await expect(entry).toContainText("3 pers. · qualsiasi orario");
+  await page.screenshot({ path: testInfo.outputPath("15c-lista-attesa-staff.png"), fullPage: true });
+  await entry.getByRole("button", { name: "Prenota" }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByLabel("Nome")).toHaveValue("Anna Neri");
+  await expect(dialog.getByLabel("Persone")).toHaveValue("3");
+  await dialog
+    .getByRole("button", { name: /^20:00/ })
+    .first()
+    .click();
+  await dialog.getByRole("button", { name: "Prenota" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole("heading", { name: "Lista d'attesa" })).toBeHidden();
+  await expect(page.getByRole("listitem").filter({ hasText: "Anna Neri" })).toContainText("20:00");
 });
 
 test("the platform admin sees every restaurant and helps one as support", async ({

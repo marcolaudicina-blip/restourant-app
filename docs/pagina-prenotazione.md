@@ -143,6 +143,25 @@ prenotazione con una firma (HMAC con `JWT_SECRET`): non si indovina e non serve 
 riceve subito un avviso ("Prenotazione modificata/disdetta dal cliente") su tutti i dispositivi, e il
 registro modifiche annota `by: "guest"`.
 
+## Lista d'attesa
+
+Nei giorni pieni (nessun orario libero per quel numero di persone) la pagina propone **Mettiti in lista
+d'attesa**: il cliente sceglie quando vorrebbe arrivare (qualsiasi orario, o uno dei servizi del
+giorno) e lascia nome, telefono ed email. Riceve un'email "Sei in lista d'attesa"; chiedere di nuovo
+per lo stesso giorno aggiorna la stessa richiesta. Si spegne in Configurazione → Regole.
+
+Quando una prenotazione di quel giorno viene **disdetta** (dal cliente o dallo staff), spostata o
+ridotta, chi è in lista e trova di nuovo un orario libero nella sua fascia riceve l'email **"Si è
+liberato un tavolo"** con gli orari liberi e il pulsante **Prenota ora**
+(`/prenota/<slug>?data=…&persone=…`, che apre già giorno e persone). Il tavolo va a chi prenota per
+primo; ognuno riceve l'avviso automatico una volta sola.
+
+Nella giornata delle prenotazioni lo staff vede il riquadro **Lista d'attesa** (con avviso e suono
+quando arriva una richiesta dal sito) e può aggiungere persone a mano (pulsante con la clessidra),
+**Prenota** (apre una nuova prenotazione già compilata), **Avvisa** (manda subito l'email), modificare
+o togliere. Una prenotazione con lo stesso telefono o email in quel giorno toglie la persona dalla
+lista ("ha prenotato").
+
 ## API
 
 Senza autenticazione, sotto `/v1/public`, con limiti per IP (120 letture e 10 prenotazioni al minuto):
@@ -152,13 +171,16 @@ Senza autenticazione, sotto `/v1/public`, con limiti per IP (120 letture e 10 pr
 - `GET /restaurants/:slug/availability?date&partySize`: orari liberi (`mode`: `book`, `request`,
   `closed` con il motivo)
 - `POST /restaurants/:slug/reservations`: prenota
+- `POST /restaurants/:slug/waitlist`: lista d'attesa (`{ date, partySize, timeFrom, timeTo, … }`);
+  `availability` dice se è possibile (`waitlist`) e la fascia di ogni servizio (`firstTime`, `lastTime`)
 - `GET /media/:id`: immagini
 - `GET /bookings/:token`, `GET /bookings/:token/availability?date&partySize`,
   `POST /bookings/:token/change` (`{ date, time, partySize }`), `POST /bookings/:token/cancel`: la
   prenotazione del cliente dal link nelle email
 
 Per lo staff: `GET`/`PATCH /restaurants/:id/booking-page` e `POST /restaurants/:id/media`
-(`{ dataUrl }`).
+(`{ dataUrl }`); lista d'attesa: `GET /restaurants/:id/waitlist?date`, `POST /waitlist`,
+`PATCH /waitlist/:id` (anche `status: "removed"`), `POST /waitlist/:id/notify`.
 
 ## Da fare
 

@@ -183,7 +183,43 @@ export type PublicAvailability = {
   mode: "book" | "request" | "closed";
   reason: string | null;
   message: string | null;
-  services: { serviceId: string; name: string; times: string[] }[];
+  services: {
+    serviceId: string;
+    name: string;
+    times: string[];
+    firstTime?: string | null;
+    lastTime?: string | null;
+  }[];
+  /** The day is full and guests may join its waiting list. */
+  waitlist?: boolean;
+};
+
+export type PublicWaitlistEntry = {
+  id: string;
+  date: string;
+  partySize: number;
+  timeFrom: string | null;
+  timeTo: string | null;
+  guestEmail: string | null;
+  emailSent: boolean;
+};
+
+export type WaitlistEntry = {
+  id: string;
+  date: string;
+  partySize: number;
+  timeFrom: string | null;
+  timeTo: string | null;
+  guestName: string;
+  guestPhone: string | null;
+  guestEmail: string | null;
+  note: string | null;
+  channel: "staff" | "online";
+  status: "waiting" | "notified" | "booked" | "removed";
+  locale: "it" | "en";
+  notifiedAt: string | null;
+  reservationId: string | null;
+  createdAt: string;
 };
 
 export type PublicBooking = {
@@ -259,6 +295,8 @@ export type Activity = {
   pendingRequests: ActivityBrief[];
   /** Bookings guests moved or cancelled themselves from the link in their emails. */
   guestChanges: (ActivityBrief & { kind: "cancelled" | "updated" })[];
+  /** Guests who joined a waiting list from the booking page. */
+  newWaitlist?: { id: string; guestName: string; partySize: number; date: string }[];
 };
 
 // Platform admin ----------------------------------------------------------------------------------

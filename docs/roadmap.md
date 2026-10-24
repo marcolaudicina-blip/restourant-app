@@ -35,5 +35,5 @@ con Stripe Connect, Super Admin, backup e disaster recovery, privacy e termini.
 
 ## Fase 3: meglio di Superb
 
-SMS e WhatsApp, lista d'attesa, feedback e recensioni Google, statistiche, assistente AI per le
+SMS e WhatsApp, ✅ lista d'attesa (avviso email quando si libera un tavolo), feedback e recensioni Google, statistiche, assistente AI per le
 prenotazioni via messaggio, gift card, marketing, integrazioni cassa.

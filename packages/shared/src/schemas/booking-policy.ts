@@ -67,6 +67,8 @@ export const bookingPolicyFields = z.object({
   sendReminders: z.boolean(),
   /** Smaller party limits for some arrival times (see `onlinePartyLimitAt`). */
   onlinePartyLimits: z.array(onlinePartyLimit).max(30),
+  /** Guests can join the waiting list of a full day from the booking page. */
+  waitlistEnabled: z.boolean(),
 });
 
 export function checkBookingPolicy(value: z.infer<typeof bookingPolicyFields>, ctx: z.RefinementCtx) {
@@ -113,4 +115,5 @@ export const DEFAULT_BOOKING_POLICY: BookingPolicy = {
   emailStaffBookings: true,
   sendReminders: true,
   onlinePartyLimits: [],
+  waitlistEnabled: true,
 };

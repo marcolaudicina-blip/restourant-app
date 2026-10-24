@@ -25,3 +25,4 @@ export * from "./schemas/booking-page.js";
 export * from "./brand.js";
 export * from "./schemas/import.js";
 export * from "./csv.js";
+export * from "./schemas/waitlist.js";

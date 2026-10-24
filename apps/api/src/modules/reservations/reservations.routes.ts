@@ -12,6 +12,7 @@ import { z } from "zod";
 import { tenant } from "../../lib/context.js";
 import { idParams } from "../../lib/http.js";
 import { emailAfterStaffChange } from "../notifications/booking-email.service.js";
+import { waitlistAfterStaffChange } from "../waitlist/waitlist.service.js";
 import { getActivity } from "./activity.service.js";
 import { getAvailability } from "./availability.service.js";
 import {
@@ -93,6 +94,7 @@ export const reservationRoutes: FastifyPluginAsyncZod = async (app) => {
       const before = await getReservation(ctx, request.params.id);
       const updated = await updateReservation(ctx, request.params.id, request.body);
       await emailAfterStaffChange(ctx, request.server.deps, before, updated, request.log);
+      await waitlistAfterStaffChange(ctx, request.server.deps, before, updated, request.log);
       return { data: updated };
     },
   );
@@ -113,6 +115,7 @@ export const reservationRoutes: FastifyPluginAsyncZod = async (app) => {
       const before = await getReservation(ctx, request.params.id);
       const updated = await setReservationStatus(ctx, request.params.id, request.body.status);
       await emailAfterStaffChange(ctx, request.server.deps, before, updated, request.log);
+      await waitlistAfterStaffChange(ctx, request.server.deps, before, updated, request.log);
       return { data: updated };
     },
   );

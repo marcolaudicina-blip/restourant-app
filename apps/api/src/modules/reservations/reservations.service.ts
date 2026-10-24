@@ -30,6 +30,7 @@ import {
 import { definedOnly } from "../../lib/http.js";
 import { guestStats, matchGuest } from "../guests/guests.service.js";
 import type { Service } from "../services/services.service.js";
+import { markWaitlistBooked } from "../waitlist/waitlist-match.js";
 import { SLOT_REASON_MESSAGES, seatingOptions } from "./availability.service.js";
 import { loadFloorContext, type FloorContext } from "./floor-context.js";
 
@@ -373,6 +374,7 @@ export async function insertReservation(
       })
       .returning();
     await writeTables(tx, row!, seating.tableIds);
+    await markWaitlistBooked(tx, row!);
     await recordAudit(tx, {
       entity: "reservation",
       entityId: row!.id,

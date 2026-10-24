@@ -16,10 +16,14 @@ import { Dialog } from "../ui/dialog";
 import { Field, Input, Select, Textarea } from "../ui/field";
 import { useToast } from "../ui/toast";
 import { ChannelBadge } from "./channel-badge";
+import type { WaitlistBooking } from "./waitlist-panel";
 
 type Mode =
-  /** `time` and `tableIds` pre-fill a new booking, e.g. from an empty slot of the grid. */
-  | { kind: "create"; walkIn?: boolean; time?: string; tableIds?: string[] }
+  /**
+   * `time` and `tableIds` pre-fill a new booking, e.g. from an empty slot of the grid; `fromWaitlist`
+   * starts from a guest on the waiting list.
+   */
+  | { kind: "create"; walkIn?: boolean; time?: string; tableIds?: string[]; fromWaitlist?: WaitlistBooking }
   | { kind: "edit"; reservation: Reservation };
 
 /** Overrides the API lets staff confirm after a warning. */
@@ -68,9 +72,10 @@ export function ReservationDialog({
   const config = useConfig();
   const toast = useToast();
 
-  const [date, setDate] = useState(editing?.date ?? initialDate);
-  const [partySize, setPartySize] = useState(editing?.partySize ?? 2);
   const preset = mode.kind === "create" ? mode : null;
+  const waiting = preset?.fromWaitlist;
+  const [date, setDate] = useState(editing?.date ?? initialDate);
+  const [partySize, setPartySize] = useState(editing?.partySize ?? waiting?.partySize ?? 2);
   const [time, setTime] = useState<string | null>(
     editing?.time ?? preset?.time ?? (walkIn ? nowRounded(timezone) : null),
   );
@@ -80,11 +85,12 @@ export function ReservationDialog({
   const [warning, setWarning] = useState<{ code: string; message: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [contact, setContact] = useState<GuestContact>({
-    name: editing?.guestName ?? initialGuest?.linked.fullName ?? (walkIn ? "Walk-in" : ""),
-    phone: editing?.guestPhone ?? initialGuest?.phone ?? "",
-    email: editing?.guestEmail ?? initialGuest?.email ?? "",
+    name:
+      editing?.guestName ?? initialGuest?.linked.fullName ?? waiting?.guest.name ?? (walkIn ? "Walk-in" : ""),
+    phone: editing?.guestPhone ?? initialGuest?.phone ?? waiting?.guest.phone ?? "",
+    email: editing?.guestEmail ?? initialGuest?.email ?? waiting?.guest.email ?? "",
   });
-  const [emailLocale, setEmailLocale] = useState<"it" | "en">(editing?.locale ?? "it");
+  const [emailLocale, setEmailLocale] = useState<"it" | "en">(editing?.locale ?? waiting?.locale ?? "it");
   const [linkedGuest, setLinkedGuest] = useState<LinkedGuest | null>(
     editing?.guest ?? initialGuest?.linked ?? null,
   );

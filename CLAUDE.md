@@ -84,6 +84,12 @@ pnpm db:migrate      # applies migrations to $DATABASE_URL
 - **Reminders** (modules/reminders): Vercel Cron (`apps/web/vercel.json`) → `/api/cron/reminders` →
   `POST /v1/internal/reminders` with `Authorization: Bearer $CRON_SECRET`; one per booking
   (`reminder_sent_at`, reset when the date changes).
+- **Waiting list** (modules/waitlist, `waitlist_entries`): guests join a full day from the booking page
+  (`POST /v1/public/restaurants/:slug/waitlist`, policy `waitlistEnabled`) or staff add them.
+  Cancellations, moves and smaller parties call `notifyWaitlist` (guest-booking.service,
+  `waitlistAfterStaffChange` in reservation routes), which emails "a table is free" to entries still
+  `waiting` whose window has free online times. `insertReservation` marks entries with the same phone
+  or email on that day `booked` (waitlist-match.ts). Web: `WaitlistPanel` in the day view.
 - **Platform admin** (modules/admin, `/v1/admin/*`, web `/admin`): users whose email is in
   `PLATFORM_ADMIN_EMAILS` (`deps.platformAdmins`); others get 404. Support access is a manager
   membership with `support = true`, audited in the restaurant (`support_access`). See `docs/admin.md`.

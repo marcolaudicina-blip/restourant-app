@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BellOff, BellRing, CalendarClock, CalendarX, Globe, X } from "lucide-react";
+import { BellOff, BellRing, CalendarClock, CalendarX, Globe, Hourglass, X } from "lucide-react";
 import Link from "next/link";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { api } from "@/lib/api";
@@ -15,17 +15,19 @@ import type { Activity, ActivityBrief } from "@/lib/types";
  * chime bookings that just arrived from the public page, and those guests moved or cancelled.
  */
 
-type Alert = ActivityBrief & { kind: "new" | "cancelled" | "updated"; key: string };
+type Alert = ActivityBrief & { kind: "new" | "cancelled" | "updated" | "waitlist"; key: string };
 
 const ALERT_COPY = {
   new: { icon: Globe, tone: "border-violet-200", badge: "bg-violet-100 text-violet-700" },
   cancelled: { icon: CalendarX, tone: "border-red-200", badge: "bg-red-100 text-red-700" },
   updated: { icon: CalendarClock, tone: "border-amber-200", badge: "bg-amber-100 text-amber-800" },
+  waitlist: { icon: Hourglass, tone: "border-amber-200", badge: "bg-amber-100 text-amber-800" },
 };
 
 function alertTitle(a: Alert) {
   if (a.kind === "cancelled") return "Prenotazione disdetta dal cliente";
   if (a.kind === "updated") return "Prenotazione modificata dal cliente";
+  if (a.kind === "waitlist") return "Nuova richiesta in lista d'attesa";
   return a.status === "requested" ? "Nuova richiesta online" : "Nuova prenotazione online";
 }
 
@@ -114,6 +116,13 @@ export function ActivityProvider({ children }: { children: ReactNode }) {
         ...c,
         key: `${c.id}:${c.kind}:${c.date}:${c.time}:${c.partySize}`,
       })),
+      ...(data.newWaitlist ?? []).map((w) => ({
+        ...w,
+        time: "",
+        status: "requested" as const,
+        kind: "waitlist" as const,
+        key: `waitlist:${w.id}`,
+      })),
     ];
     if (incoming.length > 0) {
       setAlerts((current) => [...current, ...incoming.filter((n) => !current.some((c) => c.key === n.key))]);
@@ -159,7 +168,8 @@ export function ActivityProvider({ children }: { children: ReactNode }) {
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold">{alertTitle(a)}</p>
                     <p className="truncate text-sm text-muted">
-                      {a.guestName} · {a.partySize} pers. · {formatDateShort(a.date)} ore {a.time}
+                      {a.guestName} · {a.partySize} pers. · {formatDateShort(a.date)}
+                      {a.time && ` ore ${a.time}`}
                     </p>
                     <Link
                       href={`/prenotazioni?data=${a.date}`}

@@ -13,6 +13,7 @@ import {
   setReservationStatus,
 } from "../reservations/reservations.service.js";
 import { getBookingPolicy } from "../restaurants/restaurants.service.js";
+import { notifyWaitlist } from "../waitlist/waitlist.service.js";
 import {
   confirmationStatus,
   DAY_REASON_MESSAGES,
@@ -122,8 +123,9 @@ export async function cancelGuestBooking(ctx: TenantContext, id: string, deps: D
   const now = deps.now();
   const { canCancel } = await guestActions(ctx, id, now);
   if (!canCancel) throw conflict("not_cancellable", "Questa prenotazione non si può più disdire online");
-  await setReservationStatus(ctx, id, "cancelled", { by: "guest" });
+  const cancelled = await setReservationStatus(ctx, id, "cancelled", { by: "guest" });
   await sendBookingEmail(ctx, deps, id, "cancelled", log);
+  await notifyWaitlist(ctx, deps, cancelled.date, log);
   return getGuestBooking(ctx, id, now);
 }
 
@@ -170,5 +172,6 @@ export async function changeGuestBooking(
   if (!saved) throw conflict("slot_unavailable", "Questo orario è appena stato prenotato: scegline un altro");
 
   await sendBookingEmail(ctx, deps, id, status === "requested" ? "requested" : "updated", log);
+  await notifyWaitlist(ctx, deps, reservation.date, log);
   return getGuestBooking(ctx, id, now);
 }

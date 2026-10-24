@@ -1,8 +1,15 @@
-import { dateString, guestBookingChangeInput, onlineReservationInput, partySize } from "@restourant/shared";
+import {
+  dateString,
+  guestBookingChangeInput,
+  onlineReservationInput,
+  onlineWaitlistInput,
+  partySize,
+} from "@restourant/shared";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { idParams } from "../../lib/http.js";
 import { getMedia } from "../booking-page/booking-page.service.js";
+import { joinWaitlistOnline } from "../waitlist/waitlist.service.js";
 import {
   cancelGuestBooking,
   changeGuestBooking,
@@ -60,6 +67,17 @@ export const publicRoutes: FastifyPluginAsyncZod = async (app) => {
           app.deps,
           request.log,
         ),
+      };
+    },
+  );
+
+  app.post(
+    "/restaurants/:slug/waitlist",
+    { schema: { params: slugParams, body: onlineWaitlistInput }, config: BOOK_LIMIT },
+    async (request, reply) => {
+      reply.code(201);
+      return {
+        data: await joinWaitlistOnline(await ctx(request.params.slug), request.body, app.deps, request.log),
       };
     },
   );

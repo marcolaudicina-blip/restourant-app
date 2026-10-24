@@ -2,7 +2,8 @@
 
 import { localToInstant, timeToMinutes } from "@restourant/shared";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarCheck, CalendarPlus, Check, Clock, Minus, Phone, Plus, Users } from "lucide-react";
+import { BellRing, CalendarCheck, CalendarPlus, Check, Clock, Minus, Phone, Plus, Users } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import {
   useEffect,
   useId,
@@ -14,7 +15,13 @@ import {
 } from "react";
 import { api, ApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
-import type { PublicAvailability, PublicBooking, PublicDay, PublicProfile } from "@/lib/types";
+import type {
+  PublicAvailability,
+  PublicBooking,
+  PublicDay,
+  PublicProfile,
+  PublicWaitlistEntry,
+} from "@/lib/types";
 import { Spinner } from "../ui/spinner";
 import { useGuestText } from "./i18n";
 
@@ -26,6 +33,7 @@ export const people = (n: number) => `${n} ${n === 1 ? "persona" : "persone"}`;
 /**
  * The booking widget of the public page: how many, which day, what time, who. Defaults to two
  * people on the first open day, so most guests only pick a time and fill in their details.
+ * `?data=YYYY-MM-DD&persone=N` (the link in waiting list emails) preselects day and party.
  */
 export function BookingFlow({ profile, preview = false }: { profile: PublicProfile; preview?: boolean }) {
   const { booking, slug } = profile;
@@ -34,10 +42,21 @@ export function BookingFlow({ profile, preview = false }: { profile: PublicProfi
   const { t, locale, longDate, errorMessage } = useGuestText();
 
   const chipMax = Math.min(booking.maxParty, MAX_CHIPS);
-  const [party, setParty] = useState(Math.min(Math.max(2, booking.minParty), booking.maxParty));
-  const [date, setDate] = useState<string | null>(null);
+  const params = useSearchParams();
+  const askedParty = preview ? NaN : Number(params.get("persone"));
+  const askedDate = preview ? null : params.get("data");
+  const [party, setParty] = useState(
+    Number.isInteger(askedParty) && askedParty >= booking.minParty && askedParty <= 60
+      ? askedParty
+      : Math.min(Math.max(2, booking.minParty), booking.maxParty),
+  );
+  const [date, setDate] = useState<string | null>(
+    askedDate && /^\d{4}-\d{2}-\d{2}$/.test(askedDate) ? askedDate : null,
+  );
   const [time, setTime] = useState<string | null>(null);
   const [done, setDone] = useState<PublicBooking | null>(null);
+  const [waitlistOpen, setWaitlistOpen] = useState(false);
+  const [joined, setJoined] = useState<PublicWaitlistEntry | null>(null);
 
   const large = party > booking.maxParty;
   const phoneOnly = large && booking.largePartyMode === "phone_only";
@@ -59,6 +78,7 @@ export function BookingFlow({ profile, preview = false }: { profile: PublicProfi
     if (next.party !== undefined) setParty(next.party);
     if (next.date !== undefined) setDate(next.date);
     setTime(null);
+    setWaitlistOpen(false);
   }
 
   if (!booking.enabled) {
@@ -88,7 +108,15 @@ export function BookingFlow({ profile, preview = false }: { profile: PublicProfi
     );
   }
 
+  if (joined) {
+    return <WaitlistConfirmation entry={joined} onAgain={() => setJoined(null)} />;
+  }
+
   const request = availability.data?.mode === "request";
+  const full =
+    availability.data?.mode === "book" &&
+    availability.data.waitlist === true &&
+    availability.data.services.every((s) => s.times.length === 0);
 
   return (
     <div className="flex flex-col gap-6">
@@ -169,7 +197,30 @@ export function BookingFlow({ profile, preview = false }: { profile: PublicProfi
               {t.largeGroupsRequest(booking.maxParty)}
             </p>
           )}
+          {full && !waitlistOpen && (
+            <div className="mt-3 flex flex-col items-start gap-2">
+              <p className="text-sm text-muted">{t.waitlistOffer}</p>
+              <button
+                type="button"
+                onClick={() => setWaitlistOpen(true)}
+                className="inline-flex h-11 items-center gap-2 rounded-xl border border-[var(--brand)] px-4 text-sm font-semibold text-[var(--brand-strong)] hover:bg-[var(--brand-soft)]"
+              >
+                <BellRing className="h-4 w-4" /> {t.joinWaitlist}
+              </button>
+            </div>
+          )}
         </Step>
+      )}
+
+      {!phoneOnly && day && full && waitlistOpen && availability.data && (
+        <WaitlistForm
+          profile={profile}
+          day={day}
+          party={party}
+          availability={availability.data}
+          preview={preview}
+          onJoined={setJoined}
+        />
       )}
 
       {!phoneOnly && day && time && (
@@ -357,12 +408,14 @@ function DetailsForm({
   summary,
   request,
   preview,
+  submitLabel,
   onSubmit,
 }: {
   profile: PublicProfile;
   summary: string;
   request: boolean;
   preview: boolean;
+  submitLabel?: string;
   onSubmit: (details: Details) => Promise<string | null>;
 }) {
   const { booking } = profile;
@@ -465,7 +518,7 @@ function DetailsForm({
         className="flex h-12 items-center justify-center gap-2 rounded-xl bg-[var(--brand)] text-base font-semibold text-[var(--brand-contrast)] transition-opacity hover:opacity-90 disabled:opacity-60"
       >
         {sending && <Spinner className="h-4 w-4" />}
-        {preview ? t.previewDisabled : request ? t.sendRequest : t.confirmBooking}
+        {preview ? t.previewDisabled : (submitLabel ?? (request ? t.sendRequest : t.confirmBooking))}
       </button>
     </form>
   );
@@ -479,6 +532,112 @@ function PublicField({ label, children }: { label: string; children: (id: string
         {label}
       </label>
       {children(id)}
+    </div>
+  );
+}
+
+/** A full day: the guest picks a time window (a service, or any time) and leaves their details. */
+function WaitlistForm({
+  profile,
+  day,
+  party,
+  availability,
+  preview,
+  onJoined,
+}: {
+  profile: PublicProfile;
+  day: string;
+  party: number;
+  availability: PublicAvailability;
+  preview: boolean;
+  onJoined: (entry: PublicWaitlistEntry) => void;
+}) {
+  const { t, locale, longDate, errorMessage } = useGuestText();
+  const windows = availability.services.filter((s) => s.firstTime && s.lastTime);
+  const [serviceId, setServiceId] = useState<string | null>(null);
+  const chosen = windows.find((s) => s.serviceId === serviceId) ?? null;
+  return (
+    <div className="flex flex-col gap-6">
+      <Step icon={<BellRing className="h-4 w-4" />} title={t.waitlistWhen}>
+        <div className="flex flex-wrap gap-2">
+          <Chip selected={serviceId === null} onClick={() => setServiceId(null)} className="px-3">
+            {t.anyTime}
+          </Chip>
+          {windows.length > 1 &&
+            windows.map((s) => (
+              <Chip
+                key={s.serviceId}
+                selected={serviceId === s.serviceId}
+                onClick={() => setServiceId(s.serviceId)}
+                className="px-3 tabular-nums"
+              >
+                {s.name} · {s.firstTime}–{s.lastTime}
+              </Chip>
+            ))}
+        </div>
+      </Step>
+      <DetailsForm
+        profile={profile}
+        summary={t.waitlistSummary(t.people(party), longDate(day))}
+        request={false}
+        preview={preview}
+        submitLabel={t.waitlistSubmit}
+        onSubmit={async ({ guestNote, ...details }) => {
+          try {
+            onJoined(
+              await api<PublicWaitlistEntry>(`/public/restaurants/${profile.slug}/waitlist`, {
+                method: "POST",
+                body: {
+                  date: day,
+                  partySize: party,
+                  timeFrom: chosen?.firstTime ?? null,
+                  timeTo: chosen?.lastTime ?? null,
+                  note: guestNote,
+                  ...details,
+                  locale,
+                },
+              }),
+            );
+            return null;
+          } catch (error) {
+            return errorMessage(error, t.waitlistError);
+          }
+        }}
+      />
+    </div>
+  );
+}
+
+function WaitlistConfirmation({ entry, onAgain }: { entry: PublicWaitlistEntry; onAgain: () => void }) {
+  const { t, longDate } = useGuestText();
+  const ref = useRevealOnMount<HTMLDivElement>(true);
+  return (
+    <div ref={ref} className="flex scroll-mt-4 flex-col items-center gap-4 py-4 text-center" role="status">
+      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--brand)] text-[var(--brand-contrast)]">
+        <BellRing className="h-7 w-7" />
+      </span>
+      <div>
+        <h3 className="text-xl font-semibold">{t.waitlistDoneTitle}</h3>
+        <p className="mt-1 text-sm text-muted first-letter:uppercase">
+          {t.people(entry.partySize)} · {longDate(entry.date)}
+          {entry.timeFrom && entry.timeTo ? ` · ${entry.timeFrom}–${entry.timeTo}` : ""}
+        </p>
+      </div>
+      <p className="text-sm">
+        {t.waitlistNotBooking} {t.waitlistDone}
+      </p>
+      {entry.emailSent && entry.guestEmail && (
+        <p className="text-xs text-muted">
+          {t.summarySentTo} <span className="font-medium text-ink">{entry.guestEmail}</span>
+        </p>
+      )}
+      <button
+        type="button"
+        onClick={onAgain}
+        className="text-sm font-medium text-[var(--brand-strong)] hover:underline"
+      >
+        {t.bookAgain}
+      </button>
     </div>
   );
 }

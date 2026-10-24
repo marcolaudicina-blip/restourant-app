@@ -19,6 +19,8 @@ export const keys = {
   me: ["me"] as const,
   config: (rid: string) => ["config", rid] as const,
   reservations: (rid: string, date: string) => ["reservations", rid, date] as const,
+  /** Under "reservations": refreshed with them, and by the activity watcher. */
+  waitlist: (rid: string, date: string) => ["reservations", rid, "waitlist", date] as const,
   guests: (rid: string, q: string) => ["guests", rid, q] as const,
   guest: (rid: string, id: string) => ["guests", rid, "detail", id] as const,
   availability: (rid: string, date: string, partySize: number, channel: string) =>

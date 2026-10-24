@@ -1,7 +1,17 @@
 "use client";
 
 import { isBlockingStatus } from "@restourant/shared";
-import { CalendarPlus, DoorOpen, GanttChart, Globe, List, Printer, Search, Users } from "lucide-react";
+import {
+  CalendarPlus,
+  DoorOpen,
+  GanttChart,
+  Globe,
+  Hourglass,
+  List,
+  Printer,
+  Search,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/cn";
@@ -17,9 +27,10 @@ import { PendingRequests } from "./pending-requests";
 import { ReservationDialog } from "./reservation-dialog";
 import { ReservationRow } from "./reservation-row";
 import { TimelineView } from "./timeline-view";
+import { WaitlistPanel, type WaitlistBooking } from "./waitlist-panel";
 
 type DialogState =
-  | { kind: "create"; walkIn?: boolean; time?: string; tableIds?: string[] }
+  | { kind: "create"; walkIn?: boolean; time?: string; tableIds?: string[]; fromWaitlist?: WaitlistBooking }
   | { kind: "edit"; reservation: Reservation }
   | null;
 
@@ -58,6 +69,7 @@ export function ReservationsView() {
   const [onlineOnly, setOnlineOnly] = useState(false);
   const [query, setQuery] = useState("");
   const [view, setView] = useView();
+  const [addingToWaitlist, setAddingToWaitlist] = useState(false);
 
   const all = useMemo(() => reservations.data ?? [], [reservations.data]);
   const active = all.filter((r) => isBlockingStatus(r.status) || r.status === "completed");
@@ -103,6 +115,15 @@ export function ReservationsView() {
               <Printer className="h-4 w-4" />
               <span className="hidden sm:inline">Stampa</span>
             </Link>
+            <Button
+              variant="secondary"
+              onClick={() => setAddingToWaitlist(true)}
+              title="Aggiungi alla lista d'attesa"
+              aria-label="Aggiungi alla lista d'attesa"
+            >
+              <Hourglass className="h-4 w-4" />
+              <span className="hidden lg:inline">Lista d&apos;attesa</span>
+            </Button>
             <Button variant="secondary" onClick={() => setDialog({ kind: "create", walkIn: true })}>
               <DoorOpen className="h-4 w-4" /> Walk-in
             </Button>
@@ -114,6 +135,12 @@ export function ReservationsView() {
       />
 
       <PendingRequests />
+      <WaitlistPanel
+        date={date}
+        adding={addingToWaitlist}
+        onAddingChange={setAddingToWaitlist}
+        onBook={(fromWaitlist) => setDialog({ kind: "create", fromWaitlist })}
+      />
 
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Prenotazioni" value={counted.length} />
@@ -250,7 +277,9 @@ export function ReservationsView() {
               ? dialog.reservation.id
               : dialog.walkIn
                 ? "walk-in"
-                : `new-${dialog.time ?? ""}-${dialog.tableIds?.join() ?? ""}`
+                : dialog.fromWaitlist
+                  ? `waitlist-${dialog.fromWaitlist.guest.name}`
+                  : `new-${dialog.time ?? ""}-${dialog.tableIds?.join() ?? ""}`
           }
           open
           onClose={() => setDialog(null)}
