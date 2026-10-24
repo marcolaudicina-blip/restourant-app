@@ -573,6 +573,12 @@ function Footer() {
           <a href={`mailto:${CONTACT_EMAIL}`} className="hover:text-brand-700">
             {CONTACT_EMAIL}
           </a>
+          <Link href="/privacy" className="hover:text-brand-700">
+            Privacy e cookie
+          </Link>
+          <Link href="/termini" className="hover:text-brand-700">
+            Termini
+          </Link>
           <Link href="/login" className="hover:text-brand-700">
             Accedi
           </Link>

@@ -53,6 +53,8 @@ export const bookingPolicies = pgTable(
     waitlistEnabled: boolean().notNull().default(true),
     reviewRequests: boolean().notNull().default(false),
     reviewUrl: text(),
+    /** No default: restaurants that existed before it keep their data until they choose. */
+    guestRetentionMonths: integer(),
     ...timestamps,
   },
   (t) => [

@@ -184,9 +184,11 @@ describe("auth input", () => {
       password: "a-long-password",
       fullName: "Marco",
       restaurantName: "Da Marco",
+      acceptTerms: true,
     });
     expect(ok.email).toBe("marco@example.com");
     expect(registerInput.safeParse({ ...ok, password: "short" }).success).toBe(false);
+    expect(registerInput.safeParse({ ...ok, acceptTerms: false }).success).toBe(false);
   });
 });
 

@@ -108,6 +108,10 @@ pnpm db:migrate      # applies migrations to $DATABASE_URL
 - Tables may have `onlineMaxCovers`: online seating treats it as the table's capacity (alone and joined).
 - Drizzle uses `casing: "snake_case"`: write camelCase in TypeScript, columns are snake_case.
 
+- **Privacy/GDPR** (docs/privacy.md): sign-up requires `acceptTerms` (stored in `users.terms_*`);
+  legal pages `/privacy`, `/termini`, `/trattamento-dati` (company data in `lib/site.ts`); guests'
+  notice `/prenota/<slug>/privacy` or the restaurant's `privacyUrl`; `applyRetention` (daily job)
+  anonymizes guests after `guestRetentionMonths`; owners download everything from `GET /export`.
 - **Ops**: `GET /v1/health` checks the database (503 when down). `.github/workflows/backup.yml` dumps,
   test-restores and encrypts the production database nightly (secrets `BACKUP_DATABASE_URL`,
   `BACKUP_PASSPHRASE`); `monitor.yml` polls health and the site every 10 minutes. See `docs/backup.md`.

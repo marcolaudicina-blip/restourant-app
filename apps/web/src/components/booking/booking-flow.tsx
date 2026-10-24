@@ -419,7 +419,7 @@ function DetailsForm({
   onSubmit: (details: Details) => Promise<string | null>;
 }) {
   const { booking } = profile;
-  const { t } = useGuestText();
+  const { t, locale } = useGuestText();
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const ref = useRevealOnMount<HTMLFormElement>(!preview);
@@ -506,7 +506,18 @@ function DetailsForm({
       )}
       <label className="flex items-start gap-2.5 text-sm">
         <input type="checkbox" name="privacy" required className="mt-0.5 h-4 w-4 accent-[var(--brand)]" />
-        <span>{t.consent(profile.name)}</span>
+        <span>
+          {t.consent[0]}
+          <a
+            href={profile.page.privacyUrl ?? `/prenota/${profile.slug}/privacy?lang=${locale}`}
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium text-[var(--brand-strong)] underline underline-offset-2"
+          >
+            {t.consent[1]}
+          </a>
+          {t.consent[2](profile.name)}
+        </span>
       </label>
       {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
       <div className="rounded-xl bg-[var(--brand-soft)] px-3 py-2 text-sm font-medium first-letter:uppercase text-[var(--brand-strong)]">

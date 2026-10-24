@@ -56,3 +56,27 @@ export const PLANS: Plan[] = [
     ],
   },
 ];
+
+/**
+ * Who runs TwentyReserve, for the legal pages (/privacy, /termini, /trattamento-dati). Values in
+ * square brackets are still to be filled in.
+ */
+export const COMPANY = {
+  name: "[Ragione sociale o nome e cognome del titolare]",
+  vatId: "[Partita IVA]",
+  address: "[Indirizzo della sede legale]",
+  /** Certified email (PEC), when there is one. */
+  pec: null as string | null,
+  email: CONTACT_EMAIL,
+};
+
+/** Date shown on the legal pages; change it with their text (and TERMS_VERSION in packages/shared). */
+export const LEGAL_UPDATED = "24 ottobre 2026";
+
+/** Companies that process data for TwentyReserve (listed in the privacy policy and the DPA). */
+export const SUBPROCESSORS = [
+  { name: "Vercel Inc.", role: "hosting dell'applicazione (server a Francoforte, UE)", country: "USA" },
+  { name: "Neon Inc.", role: "database PostgreSQL", country: "USA" },
+  { name: "Resend (Plus Five Five Inc.)", role: "invio delle email", country: "USA" },
+  { name: "GitHub Inc.", role: "codice sorgente e backup cifrati del database", country: "USA" },
+];

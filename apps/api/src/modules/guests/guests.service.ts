@@ -19,6 +19,7 @@ import {
   validateEntity,
 } from "../../lib/errors.js";
 import { definedOnly } from "../../lib/http.js";
+import { ANONYMOUS_GUEST } from "./retention.service.js";
 
 type GuestRow = typeof guests.$inferSelect;
 
@@ -201,10 +202,11 @@ export async function deleteGuest(ctx: TenantContext, id: string): Promise<void>
       .update(reservations)
       .set({
         guestId: null,
-        guestName: "Cliente rimosso",
+        guestName: ANONYMOUS_GUEST,
         guestPhone: null,
         guestEmail: null,
         guestNote: null,
+        feedback: null,
       })
       .where(and(eq(reservations.guestId, id), eq(reservations.restaurantId, ctx.restaurantId)));
     await tx.db.delete(guests).where(and(eq(guests.id, id), eq(guests.restaurantId, ctx.restaurantId)));

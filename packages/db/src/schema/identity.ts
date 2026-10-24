@@ -23,6 +23,9 @@ export const users = pgTable(
     fullName: text().notNull(),
     /** Bumped when the password changes or is reset: sessions carrying an older version are refused. */
     sessionVersion: integer().notNull().default(0),
+    /** Owners: when they accepted the Terms of service, and which version (TERMS_VERSION). */
+    termsAcceptedAt: timestamp({ withTimezone: true }),
+    termsVersion: text(),
     ...timestamps,
   },
   (t) => [uniqueIndex("users_email_lower_idx").on(sql`lower(${t.email})`)],

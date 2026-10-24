@@ -44,6 +44,7 @@ export async function getBookingPage(ctx: TenantContext): Promise<BookingPage> {
     brandColor: page?.brandColor ?? DEFAULT_BRAND_COLOR,
     description: page?.description ?? null,
     confirmationNote: page?.confirmationNote ?? null,
+    privacyUrl: page?.privacyUrl ?? null,
     logoId: page?.logoId ?? null,
     coverId: page?.coverId ?? null,
     photoIds: page?.photoIds ?? [],

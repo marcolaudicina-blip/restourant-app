@@ -22,7 +22,7 @@ import { QrCard } from "@/components/config/qr-card";
 import { useConfigSave } from "@/components/config/use-save";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
-import { Field, Textarea } from "@/components/ui/field";
+import { Field, Input, Textarea } from "@/components/ui/field";
 import { PageLoader, Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast";
 import { api, describeError } from "@/lib/api";
@@ -69,6 +69,7 @@ function Editor({ config, saved }: { config: ConfigSnapshot; saved: BookingPageS
       brandColor: draft.brandColor,
       description: draft.description,
       confirmationNote: draft.confirmationNote,
+      privacyUrl: draft.privacyUrl,
       logoId: draft.logoId,
       coverId: draft.coverId,
       photoIds: draft.photoIds,
@@ -81,6 +82,8 @@ function Editor({ config, saved }: { config: ConfigSnapshot; saved: BookingPageS
       requirePhone: policy.requirePhone,
       requireEmail: policy.requireEmail,
       policyText: policy.policyText,
+      guestRetentionMonths: policy.guestRetentionMonths,
+      reviewRequests: policy.reviewRequests,
       today: today(),
       lastDate: addDays(today(), policy.maxAdvanceDays),
     },
@@ -95,6 +98,7 @@ function Editor({ config, saved }: { config: ConfigSnapshot; saved: BookingPageS
         ...rest,
         description: rest.description?.trim() || null,
         confirmationNote: rest.confirmationNote?.trim() || null,
+        privacyUrl: rest.privacyUrl?.trim() || null,
         slug: slug.trim().toLowerCase(),
       },
       "Pagina di prenotazione salvata",
@@ -207,6 +211,37 @@ function Editor({ config, saved }: { config: ConfigSnapshot; saved: BookingPageS
                 </Button>
               </div>
             )}
+          </div>
+        </Card>
+
+        <Card>
+          <CardHeader
+            title="Informativa privacy per i clienti"
+            description="Chi prenota deve dichiarare di averla letta. Se non ne hai una tua, usiamo quella che prepariamo noi con i dati del locale."
+          />
+          <div className="flex flex-col gap-3 p-5">
+            <Field
+              label="Link alla tua informativa (facoltativo)"
+              hint="Lascia vuoto per usare quella pronta di TwentyReserve."
+            >
+              {(id) => (
+                <Input
+                  id={id}
+                  type="url"
+                  value={draft.privacyUrl ?? ""}
+                  onChange={(e) => update({ privacyUrl: e.target.value })}
+                  placeholder="https://www.iltuoristorante.it/privacy"
+                />
+              )}
+            </Field>
+            <a
+              href={`/prenota/${saved.slug}/privacy`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-sm font-medium text-brand-700 hover:underline"
+            >
+              Vedi l&apos;informativa pronta
+            </a>
           </div>
         </Card>
 

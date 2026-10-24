@@ -31,9 +31,14 @@ storico modifiche.
 ## Fase 2: renderlo vendibile
 
 Registrazione self-service con configurazione guidata, abbonamenti Stripe, caparre e carta a garanzia
-con Stripe Connect, Super Admin, ✅ backup e disaster recovery, privacy e termini.
+con Stripe Connect, Super Admin, ✅ backup e disaster recovery, ✅ privacy e termini (testi da far rivedere).
 
 ## Fase 3: meglio di Superb
 
 SMS e WhatsApp, ✅ lista d'attesa (avviso email quando si libera un tavolo), ✅ feedback e recensioni Google, statistiche, assistente AI per le
 prenotazioni via messaggio, gift card, marketing, integrazioni cassa.
+
+## Da fare (richieste di Marco)
+
+- Griglia tavoli × orari: una prenotazione su più tavoli diventa un'unica vignetta che copre tutti i
+  tavoli uniti, invece di ripetersi su ogni tavolo.

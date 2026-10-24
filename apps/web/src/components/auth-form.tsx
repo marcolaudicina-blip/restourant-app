@@ -18,7 +18,8 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     event.preventDefault();
     setError(null);
     setPending(true);
-    const form = Object.fromEntries(new FormData(event.currentTarget));
+    const form: Record<string, unknown> = Object.fromEntries(new FormData(event.currentTarget));
+    if (mode === "register") form.acceptTerms = form.acceptTerms === "on";
     try {
       await api("/api/session", { method: "POST", body: { mode, ...form } });
       const next = params.get("next");
@@ -63,6 +64,31 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
             />
           )}
         </Field>
+        {register && (
+          <label className="flex items-start gap-2.5 text-sm">
+            <input type="checkbox" name="acceptTerms" required className="mt-0.5 h-4 w-4 accent-brand-600" />
+            <span>
+              Accetto i{" "}
+              <a href="/termini" target="_blank" className="font-medium text-brand-700 hover:underline">
+                Termini di servizio
+              </a>{" "}
+              e l&apos;
+              <a
+                href="/trattamento-dati"
+                target="_blank"
+                className="font-medium text-brand-700 hover:underline"
+              >
+                Accordo sul trattamento dei dati
+              </a>
+              , approvo specificamente i punti 3, 4, 8, 10 e 11 dei Termini (artt. 1341-1342 c.c.) e ho letto
+              l&apos;
+              <a href="/privacy" target="_blank" className="font-medium text-brand-700 hover:underline">
+                Informativa privacy
+              </a>
+              .
+            </span>
+          </label>
+        )}
         {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
         <Button type="submit" size="lg" loading={pending} className="justify-center">
           {register ? "Crea account" : "Accedi"}

@@ -41,8 +41,11 @@ const it = {
   emailOptional: "Email (facoltativa)",
   requests: "Richieste (facoltativo)",
   requestsPlaceholder: "Allergie, intolleranze, occasioni speciali…",
-  consent: (name: string) =>
-    `Acconsento al trattamento dei miei dati da parte di ${name} per gestire la prenotazione.`,
+  consent: ["Ho letto l'", "informativa sulla privacy", (name: string) => ` di ${name}.`] as [
+    string,
+    string,
+    (name: string) => string,
+  ],
   previewDisabled: "Anteprima: invio disattivato",
   sendRequest: "Invia richiesta",
   confirmBooking: "Conferma prenotazione",
@@ -166,7 +169,7 @@ const en: GuestText = {
   emailOptional: "Email (optional)",
   requests: "Requests (optional)",
   requestsPlaceholder: "Allergies, intolerances, special occasions…",
-  consent: (name) => `I agree that ${name} processes my data to manage the booking.`,
+  consent: ["I have read ", "the privacy notice", (name) => ` of ${name}.`],
   previewDisabled: "Preview: sending disabled",
   sendRequest: "Send request",
   confirmBooking: "Confirm booking",

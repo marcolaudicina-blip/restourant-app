@@ -8,7 +8,7 @@ const PUBLIC_PATHS = ["/login", "/registrati", "/password-dimenticata"];
 const OPEN_PATHS = ["/prenota/", "/prenotazione/", "/recensione/", "/invito/", "/reimposta-password/"];
 
 /** The showcase site and the pages it links to, open to everyone. */
-const SITE_PATHS = ["/sito"];
+const SITE_PATHS = ["/sito", "/privacy", "/termini", "/trattamento-dati"];
 
 /**
  * Domains that show the showcase site (e.g. "twentyreserve.com,www.twentyreserve.com"): their home

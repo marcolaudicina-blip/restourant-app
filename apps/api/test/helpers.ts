@@ -84,6 +84,7 @@ export async function registerOwner(app: App, restaurantName = "Trattoria Test")
     password: "correct-horse-battery",
     fullName: `Owner ${counter}`,
     restaurantName,
+    acceptTerms: true,
   });
   if (res.status !== 201) throw new Error(`register failed: ${JSON.stringify(res.body)}`);
   const { token, restaurantId, user } = res.body.data as {

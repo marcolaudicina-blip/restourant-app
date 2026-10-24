@@ -1,5 +1,11 @@
 import { bookingPolicies, memberships, restaurants, users, type Database } from "@restourant/db";
-import { DEFAULT_BOOKING_POLICY, type LoginInput, type RegisterInput, type Role } from "@restourant/shared";
+import {
+  DEFAULT_BOOKING_POLICY,
+  TERMS_VERSION,
+  type LoginInput,
+  type RegisterInput,
+  type Role,
+} from "@restourant/shared";
 import { eq, sql } from "drizzle-orm";
 import { conflict, pgConstraint, pgErrorCode, PG_UNIQUE_VIOLATION, unauthorized } from "../../lib/errors.js";
 import type { PasswordHasher } from "../../lib/passwords.js";
@@ -44,7 +50,13 @@ export async function register(db: Database, passwords: PasswordHasher, input: R
     return await db.transaction(async (tx) => {
       const [user] = await tx
         .insert(users)
-        .values({ email: input.email, passwordHash, fullName: input.fullName })
+        .values({
+          email: input.email,
+          passwordHash,
+          fullName: input.fullName,
+          termsAcceptedAt: new Date(),
+          termsVersion: TERMS_VERSION,
+        })
         .returning();
       const [restaurant] = await tx
         .insert(restaurants)

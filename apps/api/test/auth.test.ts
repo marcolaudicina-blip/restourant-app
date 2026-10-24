@@ -39,6 +39,7 @@ describe("auth", () => {
       password: "another-long-password",
       fullName: "Someone",
       restaurantName: "Altro",
+      acceptTerms: true,
     });
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe("email_taken");

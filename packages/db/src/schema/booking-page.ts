@@ -45,6 +45,7 @@ export const bookingPages = pgTable(
     description: text(),
     /** Shown after booking and in the confirmation email. */
     confirmationNote: text(),
+    privacyUrl: text(),
     logoId: uuid(),
     coverId: uuid(),
     /** Gallery, in display order. Checked against `media` by the service. */

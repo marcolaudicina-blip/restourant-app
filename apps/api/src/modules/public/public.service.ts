@@ -90,6 +90,7 @@ export async function getPublicProfile(ctx: TenantContext, now: Date) {
       brandColor: page.brandColor,
       description: page.description,
       confirmationNote: page.confirmationNote,
+      privacyUrl: page.privacyUrl,
       logoId: page.logoId,
       coverId: page.coverId,
       photoIds: page.photoIds,
@@ -102,6 +103,9 @@ export async function getPublicProfile(ctx: TenantContext, now: Date) {
       requirePhone: policy.requirePhone,
       requireEmail: policy.requireEmail,
       policyText: policy.policyText,
+      /** For the privacy notice of the restaurant (/prenota/<slug>/privacy). */
+      guestRetentionMonths: policy.guestRetentionMonths,
+      reviewRequests: policy.reviewRequests,
       today,
       lastDate: addDays(today, policy.maxAdvanceDays),
     },

@@ -72,6 +72,11 @@ export const bookingPolicyFields = z.object({
   /** The day after, email guests "how was it?": happy ones are sent to `reviewUrl`. */
   reviewRequests: z.boolean(),
   /** Where happy guests leave a public review, e.g. the Google review link of the restaurant. */
+  /**
+   * GDPR: guests' details are anonymized this many months after their last booking (daily job).
+   * Null keeps them until the restaurant deletes them.
+   */
+  guestRetentionMonths: z.number().int().min(6).max(120).nullable(),
   reviewUrl: z
     .url({ protocol: /^https?$/, message: "Indirizzo non valido: copia il link completo (https://…)" })
     .max(500)
@@ -125,4 +130,5 @@ export const DEFAULT_BOOKING_POLICY: BookingPolicy = {
   waitlistEnabled: true,
   reviewRequests: false,
   reviewUrl: null,
+  guestRetentionMonths: 24,
 };

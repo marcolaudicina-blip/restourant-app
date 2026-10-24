@@ -61,6 +61,7 @@ function RulesForm({ policy }: { policy: BookingPolicy }) {
         slotIntervalMinutes: num("slotIntervalMinutes"),
         defaultDurationMinutes: num("defaultDurationMinutes"),
         policyText: String(data.get("policyText") ?? "").trim() || null,
+        guestRetentionMonths: data.get("guestRetentionMonths") ? num("guestRetentionMonths") : null,
         reviewUrl: String(data.get("reviewUrl") ?? "").trim() || null,
         onlinePartyLimits: limits.map((l) => ({ ...l, daysOfWeek: [...l.daysOfWeek].sort() })),
       },
@@ -248,6 +249,21 @@ function RulesForm({ policy }: { policy: BookingPolicy }) {
           <div className="grid gap-5 p-5 md:grid-cols-2">
             <Switch label="Telefono obbligatorio" {...flag("requirePhone")} />
             <Switch label="Email obbligatoria" {...flag("requireEmail")} />
+            <Field
+              label="Conservazione dei dati dei clienti"
+              hint="GDPR: dopo questo tempo dall'ultima prenotazione nome e contatti vengono resi anonimi."
+            >
+              {(id) => (
+                <Select id={id} name="guestRetentionMonths" defaultValue={policy.guestRetentionMonths ?? ""}>
+                  {[12, 24, 36, 60].map((m) => (
+                    <option key={m} value={m}>
+                      {m} mesi
+                    </option>
+                  ))}
+                  <option value="">Finché non li cancello io</option>
+                </Select>
+              )}
+            </Field>
             <Field label="Intervallo tra gli arrivi">
               {(id) => (
                 <Select id={id} name="slotIntervalMinutes" defaultValue={policy.slotIntervalMinutes}>

@@ -34,6 +34,14 @@ export const bookingPageFields = z.object({
    * shown on the confirmation screen and in the confirmation email.
    */
   confirmationNote: optionalText(2000),
+  /**
+   * The restaurant's own privacy notice for guests. When empty the booking page links to the notice
+   * TwentyReserve writes from the restaurant's details (/prenota/<slug>/privacy).
+   */
+  privacyUrl: z
+    .url({ protocol: /^https?$/, message: "Indirizzo non valido: copia il link completo (https://…)" })
+    .max(500)
+    .nullable(),
   logoId: id.nullable(),
   coverId: id.nullable(),
   photoIds: uniqueIds.max(MAX_GALLERY_PHOTOS, { message: `Al massimo ${MAX_GALLERY_PHOTOS} foto` }),

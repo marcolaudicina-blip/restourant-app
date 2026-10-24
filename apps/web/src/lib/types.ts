@@ -145,6 +145,8 @@ export type BookingPageSettings = {
   description: string | null;
   /** Shown right after booking and in the confirmation email. */
   confirmationNote: string | null;
+  /** The restaurant's own privacy notice; empty: the one TwentyReserve writes (/prenota/<slug>/privacy). */
+  privacyUrl: string | null;
   logoId: string | null;
   coverId: string | null;
   photoIds: string[];
@@ -169,6 +171,8 @@ export type PublicProfile = {
     requirePhone: boolean;
     requireEmail: boolean;
     policyText: string | null;
+    guestRetentionMonths: number | null;
+    reviewRequests: boolean;
     today: string;
     lastDate: string;
   };
