@@ -209,6 +209,26 @@ describe("editing", () => {
     expect(tablesOf(moved)).toBe("T2");
   });
 
+  it("accepts a change that keeps the same time (nothing else to write)", async () => {
+    const res = await book();
+    const same = await owner.api.patch(`${owner.base}/reservations/${res.body.data.id}`, {
+      time: res.body.data.time,
+    });
+    expect(same.status).toBe(200);
+  });
+
+  it("moves to a free table when the current one is blocked at the new time", async () => {
+    const res = await book({ time: "19:00", tableIds: [t.T3!.id] });
+    await owner.api.post(`${owner.base}/table-blocks`, {
+      tableId: t.T3!.id,
+      startsAt: "2026-10-24T19:00:00Z",
+      endsAt: "2026-10-24T21:00:00Z",
+    });
+    const moved = await owner.api.patch(`${owner.base}/reservations/${res.body.data.id}`, { time: "21:00" });
+    expect(moved.status).toBe(200);
+    expect(tablesOf(moved)).not.toBe("T3");
+  });
+
   it("follows the party size: bigger tables when more people come, joined ones freed when fewer", async () => {
     const res = await book({ partySize: 2 });
     expect(tablesOf(res)).toBe("T1");

@@ -118,4 +118,20 @@ describe("tables when guests change their booking", () => {
       },
     ]);
   });
+
+  it("does not offer times for groups larger than the page takes", async () => {
+    const { token } = await staffBooking("big@example.com", 2, ["T1"]);
+    const res = await guest.get(`/v1/public/bookings/${token}/availability?date=${SATURDAY}&partySize=12`);
+    expect(res.body.data).toMatchObject({ mode: "closed", reason: "large_party_phone", services: [] });
+  });
+
+  it("keeps large-group requests within the service's maximum covers", async () => {
+    const services = (await owner.api.get(`${owner.base}/services`)).body.data;
+    await owner.api.patch(`${owner.base}/services/${services[0].id}`, { maxCovers: 12 });
+    await staffBooking("full@example.com", 6, ["D1"]);
+    const slug = (await owner.api.get(`${owner.base}/booking-page`)).body.data.slug;
+    const day = await guest.get(`/v1/public/restaurants/${slug}/availability?date=${SATURDAY}&partySize=10`);
+    expect(day.body.data.mode).toBe("request");
+    expect(day.body.data.services[0].times).toEqual([]);
+  });
 });

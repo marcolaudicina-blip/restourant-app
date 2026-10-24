@@ -354,7 +354,8 @@ export async function updateReservation(
       : undefined;
     const [row] = await tx.db
       .update(reservations)
-      .set({ ...guest, ...schedule, ...(guestId !== undefined ? { guestId } : {}) })
+      // updatedAt too, so a patch that changes nothing (same time) still has something to write.
+      .set({ ...guest, ...schedule, ...(guestId !== undefined ? { guestId } : {}), updatedAt: new Date() })
       .where(and(eq(reservations.id, id), eq(reservations.restaurantId, ctx.restaurantId)))
       .returning();
     if (tableIds) await writeTables(tx, row!, tableIds);

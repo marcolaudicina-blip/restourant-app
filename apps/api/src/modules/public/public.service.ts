@@ -6,6 +6,8 @@ import {
   indexBusy,
   instantToLocal,
   normalizePhone,
+  pacingViolation,
+  slotWindows,
   timeToMinutes,
   type OnlineReservationInput,
   type ReservationStatus,
@@ -160,13 +162,24 @@ export function onlineOffer(floor: FloorContext, date: string, partySize: number
       services: floor
         .schedule("online")
         .filter((day) => day.status === "open")
-        .map((day) => ({
-          serviceId: day.serviceId,
-          name: day.name,
-          slots: day.slots
-            .filter((time) => timeToMinutes(time) >= notBefore && !exceedsOnlineLimit(floor, time, partySize))
-            .map((time) => ({ time, available: true, reason: null, option: null, durationMinutes: null })),
-        })),
+        .map((day) => {
+          // Requests hold covers too: the service's limits (pacing, maximum covers) still apply.
+          const service = floor.serviceById(day.serviceId)!;
+          const windows = slotWindows(day.slots, service.slotIntervalMinutes ?? policy.slotIntervalMinutes);
+          const load = floor.loadByService.get(service.id) ?? [];
+          return {
+            serviceId: day.serviceId,
+            name: day.name,
+            slots: day.slots
+              .filter(
+                (time, i) =>
+                  timeToMinutes(time) >= notBefore &&
+                  !exceedsOnlineLimit(floor, time, partySize) &&
+                  !pacingViolation(windows[i]!, partySize, load, service),
+              )
+              .map((time) => ({ time, available: true, reason: null, option: null, durationMinutes: null })),
+          };
+        }),
     };
   }
 

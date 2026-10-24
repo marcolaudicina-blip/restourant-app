@@ -186,7 +186,10 @@ export function reseat(
   try {
     return seat(floor, { ...args, tableIds: current });
   } catch (error) {
-    if (!(error instanceof AppError) || !["capacity_mismatch", "table_taken"].includes(error.code))
+    if (
+      !(error instanceof AppError) ||
+      !["capacity_mismatch", "table_taken", "table_blocked", "table_inactive"].includes(error.code)
+    )
       throw error;
     const kept = own(false);
     if (kept) return kept;

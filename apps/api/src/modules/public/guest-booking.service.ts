@@ -123,7 +123,19 @@ export async function getGuestAvailability(
 ) {
   const { canModify } = await guestActions(ctx, id, now);
   if (!canModify) throw conflict("not_modifiable", "Questa prenotazione non si può più modificare online");
-  return getPublicAvailability(ctx, query, now, id);
+  const availability = await getPublicAvailability(ctx, query, now, id);
+  // Bigger groups than the page takes can't be moved online (changeGuestBooking refuses them too).
+  if (availability.mode === "request") {
+    return {
+      ...availability,
+      mode: "closed" as const,
+      reason: "large_party_phone" as const,
+      message: DAY_REASON_MESSAGES.large_party_phone,
+      services: [],
+      waitlist: false,
+    };
+  }
+  return availability;
 }
 
 export async function cancelGuestBooking(ctx: TenantContext, id: string, deps: Deps, log: FastifyBaseLogger) {
@@ -209,14 +221,16 @@ function keepTables(
   current: string[],
 ) {
   if (current.length === 0) return null;
-  const own = seatingOptions(floor, service, partySize, "online").filter((option) =>
+  // The tables are already the guest's (maybe chosen by staff): any of them that still suits the
+  // party may stay, also those not offered online.
+  const own = seatingOptions(floor, service, partySize, "staff").filter((option) =>
     option.tableIds.every((id) => current.includes(id)),
   );
   const free = findFreeOption(
     own,
     start,
     floor.durationFor(partySize, service?.id ?? null),
-    indexBusy(floor.busy, "online"),
+    indexBusy(floor.busy, "staff"),
   );
   return free ? { tableIds: free.option.tableIds, durationMinutes: free.durationMinutes } : null;
 }
