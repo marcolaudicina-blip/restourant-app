@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   description: "Prenotazioni e sala per ristoranti",
 };
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#195d53" };
+export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#2f6555" };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (

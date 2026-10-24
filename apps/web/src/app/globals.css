@@ -3,13 +3,14 @@
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
-  --color-brand-50: #eef7f5;
-  --color-brand-100: #d5ece7;
-  --color-brand-200: #acd8cf;
-  --color-brand-500: #2f8f7f;
-  --color-brand-600: #1f7466;
-  --color-brand-700: #195d53;
-  --color-brand-900: #0f3a34;
+  /* TwentyReserve green: 600 is the logo's colour. */
+  --color-brand-50: #eff5f2;
+  --color-brand-100: #d8e8e1;
+  --color-brand-200: #b3d1c5;
+  --color-brand-500: #3f7f6c;
+  --color-brand-600: #2f6555;
+  --color-brand-700: #264f44;
+  --color-brand-900: #163029;
 
   --color-surface: #ffffff;
   --color-canvas: #f6f5f2;

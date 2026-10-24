@@ -42,6 +42,7 @@ describe("invitations", () => {
     const mail = ctx.sentEmails.at(-1)!;
     expect(mail).toMatchObject({ to: email, subject: "Invito a lavorare con Trattoria Squadra" });
     expect(mail.text).toContain(`https://app.test/invito/${token}`);
+    expect(mail.html).toContain('src="https://app.test/brand/email-logo.png"');
 
     const team = (await owner.api.get(`${owner.base}/team`)).body.data;
     expect(team.invitations.map((i: { email: string }) => i.email)).toEqual([email]);

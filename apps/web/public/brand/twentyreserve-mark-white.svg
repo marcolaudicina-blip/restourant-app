@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -10 320 220" role="img" aria-label="TwentyReserve">
+  <title>TwentyReserve</title>
+  <circle cx="208" cy="100" r="80" fill="none" stroke="#ffffff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 22 62 C 26 34 50 20 78 20 C 106 20 127 40 127 67 C 127 95 107 113 86 132 C 62 150 38 168 27 176 Q 20 181 32 180 L 208 180" fill="none" stroke="#ffffff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 208 100 V 44" fill="none" stroke="#ffffff" stroke-width="6.72" stroke-linecap="round"/>
+  <path d="M 208 100 L 176.8 118.0" fill="none" stroke="#ffffff" stroke-width="6.72" stroke-linecap="round"/>
+  <ellipse cx="173.4" cy="120.0" rx="9" ry="4.6" transform="rotate(150.0 173.4 120.0)" fill="#ffffff"/>
+  <circle cx="208" cy="100" r="7.68" fill="#ffffff"/>
+</svg>

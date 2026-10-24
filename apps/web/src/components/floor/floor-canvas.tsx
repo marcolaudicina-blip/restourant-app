@@ -133,7 +133,7 @@ export function FloorCanvas({
                 y1={(PAD + pa.y + a.height / 2) * scale}
                 x2={(PAD + pb.x + b.width / 2) * scale}
                 y2={(PAD + pb.y + b.height / 2) * scale}
-                stroke="#2f8f7f"
+                stroke="#3f7f6c"
                 strokeWidth={3}
                 strokeDasharray="6 5"
                 strokeLinecap="round"

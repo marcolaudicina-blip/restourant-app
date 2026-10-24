@@ -18,4 +18,7 @@ export function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
-export const config = { matcher: ["/((?!api|_next|favicon.ico).*)"] };
+/** Everything but API calls, Next assets, icons, the web manifest and the logo files. */
+export const config = {
+  matcher: ["/((?!api|_next|favicon.ico|icon|apple-icon|manifest.webmanifest|brand/).*)"],
+};

@@ -66,7 +66,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <ActivityProvider>
         <div className="min-h-dvh md:pl-60 print:pl-0">
           <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-line bg-surface md:flex print:hidden">
-            <ProductLogo className="px-5 py-5" />
+            <ProductLogo className="px-5 pb-4 pt-5" />
             <div className="px-3">
               {memberships.length > 1 ? (
                 <select

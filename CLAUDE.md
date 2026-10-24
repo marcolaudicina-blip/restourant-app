@@ -6,7 +6,8 @@ Guidance for Claude Code when working in this repository.
 
 **TwentyReserve** (app.twentyreserve.com): a multi-tenant SaaS for restaurant reservations and table
 management (a Superb / Zenchef alternative). The product name lives in
-`apps/web/src/components/product-logo.tsx`; package names (`@restourant/*`) keep the old working name.
+`apps/web/src/components/product-logo.tsx` (the logo, drawn in `currentColor`); logo files, icons and
+colours are described in `docs/marchio.md`. Package names (`@restourant/*`) keep the old working name.
 Product docs are in Italian (`docs/`), code and code comments in English.
 
 ## Layout
