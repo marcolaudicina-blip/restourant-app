@@ -325,7 +325,13 @@ export type Activity = {
   newOnline: ActivityBrief[];
   pendingRequests: ActivityBrief[];
   /** Bookings guests moved or cancelled themselves from the link in their emails. */
-  guestChanges: (ActivityBrief & { kind: "cancelled" | "updated" })[];
+  guestChanges: (ActivityBrief & {
+    kind: "cancelled" | "updated";
+    /** After a change: where the guest sits now, and before when the tables changed. */
+    tables?: string | null;
+    room?: string | null;
+    previousTables?: string | null;
+  })[];
   /** Guests who joined a waiting list from the booking page. */
   newWaitlist?: { id: string; guestName: string; partySize: number; date: string }[];
 };

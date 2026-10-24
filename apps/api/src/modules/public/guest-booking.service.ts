@@ -1,12 +1,19 @@
 import { reservations, type Database } from "@restourant/db";
-import { timeToMinutes, type GuestBookingChangeInput, type ReservationStatus } from "@restourant/shared";
+import {
+  findFreeOption,
+  indexBusy,
+  timeToMinutes,
+  type GuestBookingChangeInput,
+  type ReservationStatus,
+} from "@restourant/shared";
 import { eq } from "drizzle-orm";
 import type { FastifyBaseLogger } from "fastify";
 import type { TenantContext } from "../../lib/context.js";
 import { conflict, notFound } from "../../lib/errors.js";
 import type { AppDeps } from "../../types.js";
 import { sendBookingEmail } from "../notifications/booking-email.service.js";
-import { loadFloorContext } from "../reservations/floor-context.js";
+import { seatingOptions } from "../reservations/availability.service.js";
+import { loadFloorContext, type FloorContext } from "../reservations/floor-context.js";
 import {
   getReservation,
   rescheduleReservation,
@@ -151,20 +158,32 @@ export async function changeGuestBooking(
     .find((x) => x.slot.time === input.time && x.slot.available);
   if (!match) throw conflict("slot_unavailable", "Questo orario non è disponibile: scegline un altro");
 
+  const service = floor.serviceById(match.serviceId)!;
+  const start = timeToMinutes(input.time);
+  const seating = keepTables(floor, service, input.partySize, start, reservation.tableIds) ?? {
+    tableIds: match.slot.option!.tableIds,
+    durationMinutes: match.slot.durationMinutes!,
+  };
+
   // A request stays a request; a confirmed booking may need a new confirmation (e.g. more people).
   const status =
     reservation.status === "requested" ? "requested" : confirmationStatus(floor, input.partySize);
   const saved = await rescheduleReservation(ctx, floor, id, {
-    service: floor.serviceById(match.serviceId)!,
-    start: timeToMinutes(input.time),
+    service,
+    start,
     time: input.time,
     partySize: input.partySize,
-    seating: { tableIds: match.slot.option!.tableIds, durationMinutes: match.slot.durationMinutes! },
+    seating,
     status,
     locale: input.locale,
     audit: {
       by: "guest",
-      from: { date: reservation.date, time: reservation.time, partySize: reservation.partySize },
+      from: {
+        date: reservation.date,
+        time: reservation.time,
+        partySize: reservation.partySize,
+        tableIds: reservation.tableIds,
+      },
       ...input,
       ...(status !== reservation.status ? { status: { from: reservation.status, to: status } } : {}),
     },
@@ -174,4 +193,30 @@ export async function changeGuestBooking(
   await sendBookingEmail(ctx, deps, id, status === "requested" ? "requested" : "updated", log);
   await notifyWaitlist(ctx, deps, reservation.date, log);
   return getGuestBooking(ctx, id, now);
+}
+
+/**
+ * The guest's current tables, or part of them, when they still suit the new party and time: fewer
+ * people keep their table and free the joined ones, nobody is moved without need. Null when the
+ * engine's own choice is needed (more people, other time, table no longer free), which may be in
+ * another room.
+ */
+function keepTables(
+  floor: FloorContext,
+  service: Parameters<typeof seatingOptions>[1],
+  partySize: number,
+  start: number,
+  current: string[],
+) {
+  if (current.length === 0) return null;
+  const own = seatingOptions(floor, service, partySize, "online").filter((option) =>
+    option.tableIds.every((id) => current.includes(id)),
+  );
+  const free = findFreeOption(
+    own,
+    start,
+    floor.durationFor(partySize, service?.id ?? null),
+    indexBusy(floor.busy, "online"),
+  );
+  return free ? { tableIds: free.option.tableIds, durationMinutes: free.durationMinutes } : null;
 }

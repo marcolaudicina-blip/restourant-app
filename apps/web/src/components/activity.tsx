@@ -15,7 +15,13 @@ import type { Activity, ActivityBrief } from "@/lib/types";
  * chime bookings that just arrived from the public page, and those guests moved or cancelled.
  */
 
-type Alert = ActivityBrief & { kind: "new" | "cancelled" | "updated" | "waitlist"; key: string };
+type Alert = ActivityBrief & {
+  kind: "new" | "cancelled" | "updated" | "waitlist";
+  key: string;
+  tables?: string | null;
+  room?: string | null;
+  previousTables?: string | null;
+};
 
 const ALERT_COPY = {
   new: { icon: Globe, tone: "border-violet-200", badge: "bg-violet-100 text-violet-700" },
@@ -171,6 +177,13 @@ export function ActivityProvider({ children }: { children: ReactNode }) {
                       {a.guestName} · {a.partySize} pers. · {formatDateShort(a.date)}
                       {a.time && ` ore ${a.time}`}
                     </p>
+                    {a.kind === "updated" && a.tables && (
+                      <p className="text-sm">
+                        Tavolo <span className="font-semibold">{a.tables}</span>
+                        {a.room && ` · ${a.room}`}
+                        {a.previousTables && <span className="text-muted"> (prima {a.previousTables})</span>}
+                      </p>
+                    )}
                     <Link
                       href={`/prenotazioni?data=${a.date}`}
                       onClick={() => dismiss(a.key)}

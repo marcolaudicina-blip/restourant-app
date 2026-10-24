@@ -138,6 +138,11 @@ con i colori del ristorante dove il cliente vede la prenotazione e può:
   devono chiamare;
 - **disdirla**: il tavolo torna libero.
 
+I tavoli si aggiornano da soli: se il tavolo attuale va ancora bene il cliente resta lì (con meno
+persone tiene uno dei tavoli uniti e libera gli altri); se non basta più, o è cambiato l'orario e il
+tavolo è occupato, il sistema sceglie il tavolo libero migliore, anche in un'altra sala. Lo staff
+vede nell'avviso il tavolo nuovo con la sala e quello di prima.
+
 Dopo il termine (es. 2 ore prima) la pagina dice di contattare il ristorante. Il codice è l'id della
 prenotazione con una firma (HMAC con `JWT_SECRET`): non si indovina e non serve salvarlo. Lo staff
 riceve subito un avviso ("Prenotazione modificata/disdetta dal cliente") su tutti i dispositivi, e il
