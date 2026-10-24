@@ -140,6 +140,8 @@ export type BookingPageSettings = {
   slug: string;
   brandColor: string;
   description: string | null;
+  /** Shown right after booking and in the confirmation email. */
+  confirmationNote: string | null;
   logoId: string | null;
   coverId: string | null;
   photoIds: string[];
@@ -189,4 +191,7 @@ export type PublicBooking = {
   partySize: number;
   durationMinutes: number;
   guestName: string;
+  guestEmail: string | null;
+  /** The summary email went out. */
+  emailSent: boolean;
 };

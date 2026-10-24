@@ -2,16 +2,24 @@ import { memberships, users, type DatabaseHandle } from "@restourant/db";
 import { createTestDatabase } from "@restourant/db/testing";
 import type { Role } from "@restourant/shared";
 import { buildApp, type App } from "../src/app.js";
+import { createMemoryMailer, type EmailMessage } from "../src/lib/mailer.js";
 import { createPasswordHasher } from "../src/lib/passwords.js";
 import { createTokenService } from "../src/lib/tokens.js";
 
-export type TestContext = { app: App; database: DatabaseHandle; close: () => Promise<void> };
+export type TestContext = {
+  app: App;
+  database: DatabaseHandle;
+  /** Emails the app sent, newest last. */
+  sentEmails: EmailMessage[];
+  close: () => Promise<void>;
+};
 
 /** Frozen "now" for every test app: Friday 23 October 2026, 10:00 in Rome. Tests may move it. */
 export const clock = { now: new Date("2026-10-23T08:00:00Z") };
 
 export async function createTestApp(): Promise<TestContext> {
   const database = await createTestDatabase();
+  const mailer = createMemoryMailer();
   const app = await buildApp({
     deps: {
       db: database.db,
@@ -19,12 +27,15 @@ export async function createTestApp(): Promise<TestContext> {
       // Low cost keeps the suite fast; production uses the OWASP default.
       passwords: createPasswordHasher(2 ** 10),
       now: () => clock.now,
+      mailer,
+      publicUrl: "https://app.test",
     },
     rateLimit: false,
   });
   return {
     app,
     database,
+    sentEmails: mailer.sent,
     close: async () => {
       await app.close();
       await database.close();

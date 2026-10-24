@@ -45,6 +45,8 @@ export default function RoomsAndTablesPage() {
           La <strong>priorità</strong> decide quali tavoli il sistema propone per primi: più è alta, prima
           viene scelto. I tavoli <strong>solo unito</strong> non vengono mai dati da soli. Per unire tavoli
           vicini usa <em>Sala → Modifica disposizione → Tavoli affiancati</em>, oppure crea una combinazione.
+          Con <strong>max online</strong> limiti quante persone possono prenotare quel tavolo dal sito (vuoto
+          = fino al massimo del tavolo): lo staff può comunque riempirlo.
         </p>
       </div>
 
@@ -176,7 +178,7 @@ function RoomCard({
       </div>
 
       <fieldset disabled={!editable} className="overflow-x-auto">
-        <table className="w-full min-w-[640px] text-sm">
+        <table className="w-full min-w-[720px] text-sm">
           <thead>
             <tr className="text-left text-xs uppercase tracking-wide text-muted">
               <th className="px-4 py-2 font-medium">Tavolo</th>
@@ -184,6 +186,9 @@ function RoomCard({
               <th className="px-2 py-2 font-medium">Max</th>
               <th className="px-2 py-2 font-medium">Priorità</th>
               <th className="px-2 py-2 text-center font-medium">Online</th>
+              <th className="px-2 py-2 font-medium" title="Persone al massimo per le prenotazioni online">
+                Max online
+              </th>
               <th className="px-2 py-2 text-center font-medium">Solo unito</th>
               <th className="px-2 py-2 text-center font-medium">Attivo</th>
               <th className="w-12" />
@@ -232,6 +237,16 @@ function RoomCard({
                     label="Prenotabile online"
                     checked={table.onlineBookable}
                     onChange={(onlineBookable) => patchTable(table, { onlineBookable })}
+                  />
+                </td>
+                <td className="px-0 py-1">
+                  <InlineNumber
+                    value={table.onlineMaxCovers}
+                    min={table.minCovers}
+                    max={table.maxCovers}
+                    label="Persone massime online"
+                    placeholder={String(table.maxCovers)}
+                    onCommit={(onlineMaxCovers) => patchTable(table, { onlineMaxCovers })}
                   />
                 </td>
                 <td className="text-center">

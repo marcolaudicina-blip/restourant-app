@@ -15,6 +15,10 @@ Da **Configurazione → Pagina di prenotazione** (titolare e manager):
   resta leggibile anche con colori chiari.
 - **Logo**, **copertina** e fino a **8 foto** del locale, nell'ordine scelto.
 - **Presentazione**: qualche riga sul locale (max 600 caratteri).
+- **Avviso dopo la prenotazione** (max 2000 caratteri): le regole del ristorante e le informazioni
+  utili (ritardi, disdette, caparra, parcheggio, allergie…). Compare subito dopo la prenotazione e
+  nell'email di conferma; nell'anteprima si vede con la scheda **Conferma**. C'è un esempio da cui
+  partire.
 
 L'anteprima a destra mostra la pagina mentre la modifichi, sia intera sia come modulo nel sito.
 Nome, indirizzo, telefono, email e sito vengono da **Dati del locale**; le regole (persone min/max,
@@ -69,6 +73,24 @@ prenotato" e sceglie un altro orario (il database impedisce comunque le doppie p
 Il cliente viene riconosciuto o creato in **Clienti** dal numero di telefono, come per le
 prenotazioni inserite dallo staff.
 
+Il tavolo viene scelto considerando il **max persone online** di ogni tavolo (Sale e tavoli), se
+impostato.
+
+## Email al cliente
+
+Se il cliente ha lasciato l'email, riceve:
+
+| Quando                                         | Email                                              |
+| ---------------------------------------------- | -------------------------------------------------- |
+| Prenotazione confermata subito                 | "Prenotazione confermata" con giorno, ora, persone |
+| Richiesta (conferma manuale o gruppo numeroso) | "Richiesta di prenotazione ricevuta"               |
+| Lo staff conferma una richiesta online         | "Prenotazione confermata"                          |
+
+Ogni email ha i colori e il logo del ristorante, le richieste del cliente, l'**avviso dopo la
+prenotazione**, indirizzo e telefono e il link alla pagina. Il mittente mostra il nome del ristorante
+e le risposte arrivano all'email del ristorante (Dati del locale). L'esito di ogni invio (`sent`,
+`failed`, `not_configured`) resta nel registro modifiche. Configurazione: vedi `deploy.md`.
+
 ## API
 
 Senza autenticazione, sotto `/v1/public`, con limiti per IP (120 letture e 10 prenotazioni al minuto):
@@ -85,5 +107,6 @@ Per lo staff: `GET`/`PATCH /restaurants/:id/booking-page` e `POST /restaurants/:
 
 ## Da fare
 
-Email di conferma con link per modificare o disdire, pagina in inglese, dominio personalizzato del
-ristorante, QR code da stampare.
+Link nell'email per modificare o disdire, email per le prenotazioni inserite dallo staff e per le
+cancellazioni, promemoria il giorno prima, pagina in inglese, dominio personalizzato del ristorante,
+QR code da stampare.

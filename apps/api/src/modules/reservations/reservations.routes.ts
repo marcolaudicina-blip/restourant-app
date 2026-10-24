@@ -11,6 +11,7 @@ import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { tenant } from "../../lib/context.js";
 import { idParams } from "../../lib/http.js";
+import { sendBookingEmail } from "../notifications/booking-email.service.js";
 import { getAvailability } from "./availability.service.js";
 import {
   createReservation,
@@ -83,8 +84,15 @@ export const reservationRoutes: FastifyPluginAsyncZod = async (app) => {
   app.post(
     "/reservations/:id/status",
     { schema: { params: idParams, body: reservationStatusInput }, config: WRITE },
-    async (request) => ({
-      data: await setReservationStatus(tenant(request), request.params.id, request.body.status),
-    }),
+    async (request) => {
+      const ctx = tenant(request);
+      const before = await getReservation(ctx, request.params.id);
+      const updated = await setReservationStatus(ctx, request.params.id, request.body.status);
+      // Guests who sent a request from the booking page hear back when the restaurant accepts it.
+      if (before.status === "requested" && updated.status === "confirmed" && updated.channel === "online") {
+        await sendBookingEmail(ctx, request.server.deps, updated.id, "confirmed", request.log);
+      }
+      return { data: updated };
+    },
   );
 };

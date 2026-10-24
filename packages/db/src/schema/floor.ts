@@ -53,6 +53,8 @@ export const diningTables = pgTable(
     maxCovers: integer().notNull(),
     priority: integer().notNull().default(0),
     onlineBookable: boolean().notNull().default(true),
+    /** Largest party online guests may book on this table; null: up to `maxCovers`. */
+    onlineMaxCovers: integer(),
     combinationOnly: boolean().notNull().default(false),
     isActive: boolean().notNull().default(true),
     shape: tableShapeEnum().notNull().default("square"),
@@ -72,6 +74,10 @@ export const diningTables = pgTable(
     }).onDelete("cascade"),
     index().on(t.roomId),
     check("tables_covers_range", sql`${t.minCovers} >= 1 and ${t.minCovers} <= ${t.maxCovers}`),
+    check(
+      "tables_online_covers_range",
+      sql`${t.onlineMaxCovers} is null or ${t.onlineMaxCovers} between ${t.minCovers} and ${t.maxCovers}`,
+    ),
   ],
 );
 

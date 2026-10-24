@@ -47,6 +47,7 @@ export function InlineNumber({
   min,
   max,
   label,
+  placeholder,
   className,
 }: {
   value: number | null;
@@ -54,6 +55,8 @@ export function InlineNumber({
   min?: number;
   max?: number;
   label: string;
+  /** Shown when empty, e.g. the value that applies by default. */
+  placeholder?: string;
   className?: string;
 }) {
   const [draft, setDraft] = useState(value === null ? "" : String(value));
@@ -77,6 +80,7 @@ export function InlineNumber({
       min={min}
       max={max}
       value={draft}
+      placeholder={placeholder}
       onChange={(e) => setDraft(e.target.value)}
       onBlur={commit}
       onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}

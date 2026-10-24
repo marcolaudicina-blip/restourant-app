@@ -14,10 +14,17 @@ sposta su un server dedicato (Railway) impostando `API_URL`, senza toccare il co
 
 ### Variabili d'ambiente
 
-| Variabile                               | Da dove                                                            |
-| --------------------------------------- | ------------------------------------------------------------------ |
-| `DATABASE_URL`, `DATABASE_URL_UNPOOLED` | create dall'integrazione Neon quando colleghi il database          |
-| `JWT_SECRET`                            | stringa casuale di almeno 32 caratteri (`openssl rand -base64 48`) |
+| Variabile                               | Da dove                                                                                             |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`, `DATABASE_URL_UNPOOLED` | create dall'integrazione Neon quando colleghi il database                                           |
+| `JWT_SECRET`                            | stringa casuale di almeno 32 caratteri (`openssl rand -base64 48`)                                  |
+| `RESEND_API_KEY`                        | chiave API di [Resend](https://resend.com) per le email ai clienti                                  |
+| `EMAIL_FROM`                            | mittente su un dominio verificato in Resend, es. `Prenotazioni <prenotazioni@tuodominio.it>`        |
+| `APP_URL` (facoltativa)                 | indirizzo pubblico dell'app per link e logo nelle email; di default il dominio di produzione Vercel |
+
+Senza `RESEND_API_KEY` ed `EMAIL_FROM` le email non partono (le prenotazioni funzionano comunque, e il
+registro modifiche annota `not_configured`). Mettile solo in Production, così le anteprime non
+scrivono mai ai clienti.
 
 ### Database
 

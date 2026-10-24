@@ -64,6 +64,12 @@ describe("table", () => {
   it("rejects min > max", () => {
     expect(messages(table.safeParse({ ...base, minCovers: 6 }))).toContain("maxCovers");
   });
+
+  it("keeps the online maximum within the table's range", () => {
+    expect(table.safeParse({ ...base, onlineMaxCovers: 3 }).success).toBe(true);
+    expect(messages(table.safeParse({ ...base, onlineMaxCovers: 5 }))).toContain("onlineMaxCovers");
+    expect(messages(table.safeParse({ ...base, onlineMaxCovers: 1 }))).toContain("onlineMaxCovers");
+  });
 });
 
 describe("combination", () => {

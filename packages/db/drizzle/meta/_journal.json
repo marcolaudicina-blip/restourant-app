@@ -43,6 +43,13 @@
       "when": 1792797644256,
       "tag": "0005_booking_page",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792825122304,
+      "tag": "0006_online_capacity_and_note",
+      "breakpoints": true
     }
   ]
 }

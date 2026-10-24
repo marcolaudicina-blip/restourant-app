@@ -122,6 +122,20 @@ export function TableInspector({
         </span>
       </Row>
 
+      <Row label="Max online">
+        <span className="flex items-center gap-1 text-sm">
+          <InlineNumber
+            value={table.onlineMaxCovers}
+            min={table.minCovers}
+            max={table.maxCovers}
+            label="Persone massime online"
+            placeholder={String(table.maxCovers)}
+            onCommit={(onlineMaxCovers) => patch({ onlineMaxCovers })}
+          />
+          <span className="text-xs text-muted">persone</span>
+        </span>
+      </Row>
+
       <Row label="Priorità">
         <InlineNumber
           value={table.priority}

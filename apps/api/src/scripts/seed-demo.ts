@@ -12,6 +12,7 @@ import { bookingPages, createDatabase, memberships, reservations, users } from "
 import { addDays, instantToLocal } from "@restourant/shared";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { buildApp } from "../app.js";
+import { disabledMailer } from "../lib/mailer.js";
 import { createPasswordHasher } from "../lib/passwords.js";
 import { createTokenService } from "../lib/tokens.js";
 
@@ -36,6 +37,9 @@ const app = await buildApp({
     tokens: createTokenService(randomBytes(48).toString("base64")),
     passwords: createPasswordHasher(),
     now: () => new Date(),
+    // Demo bookings never email anyone.
+    mailer: disabledMailer,
+    publicUrl: null,
   },
   rateLimit: false,
 });

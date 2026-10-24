@@ -11,6 +11,8 @@ export const tableFields = z.object({
   /** Higher priority tables are offered first by automatic assignment. */
   priority: z.number().int().min(0).max(100),
   onlineBookable: z.boolean(),
+  /** Online guests get this table for at most this many people (staff can still fill it). */
+  onlineMaxCovers: covers.nullable(),
   /** The table is never booked on its own, only as part of a combination. */
   combinationOnly: z.boolean(),
   isActive: z.boolean(),
@@ -24,15 +26,24 @@ export const tableFields = z.object({
 });
 
 export function checkTable(
-  value: Pick<z.infer<typeof tableFields>, "minCovers" | "maxCovers">,
+  value: Pick<z.infer<typeof tableFields>, "minCovers" | "maxCovers" | "onlineMaxCovers">,
   ctx: z.RefinementCtx,
 ) {
   checkMinMax(ctx, value.minCovers, value.maxCovers, "maxCovers");
+  const online = value.onlineMaxCovers;
+  if (online != null && (online < value.minCovers || online > value.maxCovers)) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["onlineMaxCovers"],
+      message: "Il massimo online deve essere tra il minimo e il massimo del tavolo",
+    });
+  }
 }
 
 export const tableDefaults = {
   priority: 0,
   onlineBookable: true,
+  onlineMaxCovers: null,
   combinationOnly: false,
   isActive: true,
   shape: "square",
@@ -46,6 +57,7 @@ export const tableDefaults = {
 export const tableCreateInput = tableFields.partial({
   priority: true,
   onlineBookable: true,
+  onlineMaxCovers: true,
   combinationOnly: true,
   isActive: true,
   shape: true,

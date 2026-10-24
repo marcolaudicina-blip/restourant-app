@@ -12,6 +12,7 @@ import {
   type SlotAvailability,
 } from "@restourant/shared";
 import { eq } from "drizzle-orm";
+import type { FastifyBaseLogger } from "fastify";
 import type { TenantContext } from "../../lib/context.js";
 import {
   AppError,
@@ -21,6 +22,7 @@ import {
   pgErrorCode,
   PG_EXCLUSION_VIOLATION,
 } from "../../lib/errors.js";
+import type { AppDeps } from "../../types.js";
 import { getBookingPage } from "../booking-page/booking-page.service.js";
 import {
   listCalendarExceptions,
@@ -32,6 +34,7 @@ import {
   seatingOptions,
   type OnlineDayReason,
 } from "../reservations/availability.service.js";
+import { sendBookingEmail } from "../notifications/booking-email.service.js";
 import { loadFloorContext, type FloorContext } from "../reservations/floor-context.js";
 import { getReservation, insertReservation } from "../reservations/reservations.service.js";
 import { getBookingPolicy, getRestaurant } from "../restaurants/restaurants.service.js";
@@ -85,6 +88,7 @@ export async function getPublicProfile(ctx: TenantContext, now: Date) {
     page: {
       brandColor: page.brandColor,
       description: page.description,
+      confirmationNote: page.confirmationNote,
       logoId: page.logoId,
       coverId: page.coverId,
       photoIds: page.photoIds,
@@ -212,7 +216,13 @@ function confirmationStatus(floor: FloorContext, partySize: number): Reservation
   }
 }
 
-export async function createOnlineReservation(ctx: TenantContext, input: OnlineReservationInput, now: Date) {
+export async function createOnlineReservation(
+  ctx: TenantContext,
+  input: OnlineReservationInput,
+  deps: Pick<AppDeps, "mailer" | "publicUrl" | "now">,
+  log: FastifyBaseLogger,
+) {
+  const now = deps.now();
   if (input.website) throw new AppError(400, "rejected", "Prenotazione non valida");
 
   const floor = await loadFloorContext(ctx, input.date);
@@ -275,6 +285,13 @@ export async function createOnlineReservation(ctx: TenantContext, input: OnlineR
   }
 
   const created = await getReservation(ctx, id);
+  const emailStatus = await sendBookingEmail(
+    ctx,
+    deps,
+    id,
+    created.status === "confirmed" ? "confirmed" : "requested",
+    log,
+  );
   return {
     id: created.id,
     status: created.status,
@@ -283,5 +300,7 @@ export async function createOnlineReservation(ctx: TenantContext, input: OnlineR
     partySize: created.partySize,
     durationMinutes: created.durationMinutes,
     guestName: created.guestName,
+    guestEmail: created.guestEmail,
+    emailSent: emailStatus === "sent",
   };
 }

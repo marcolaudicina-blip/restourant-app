@@ -218,3 +218,21 @@ describe("room order", () => {
     expect(names(options(2, { tables, rooms: ordered }))).toEqual(["Z9", "A1"]);
   });
 });
+
+describe("online capacity of a table", () => {
+  const tables = [table("T1", 2, 6, { onlineMaxCovers: 4 }), table("T2", 2, 4)];
+
+  it("limits online parties, not staff", () => {
+    expect(names(options(6, { tables, channel: "staff" }))).toEqual(["T1"]);
+    expect(names(options(6, { tables, channel: "online" }))).toEqual([]);
+    expect(names(options(4, { tables, channel: "online" }))).toEqual(["T1", "T2"]);
+  });
+
+  it("counts the online capacity when tables are joined", () => {
+    const adjacencies = [{ tableAId: "T1", tableBId: "T2" }];
+    // Staff: T1 alone takes 6. Online: T1 counts 4, so 6 people need T1+T2 (4 + 4 = 8).
+    expect(names(options(6, { tables, adjacencies, channel: "staff" }))).toEqual(["T1"]);
+    expect(names(options(6, { tables, adjacencies, channel: "online" }))).toEqual(["T1+T2"]);
+    expect(options(8, { tables, adjacencies, channel: "online" })[0]).toMatchObject({ maxCovers: 8 });
+  });
+});

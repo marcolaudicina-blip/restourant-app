@@ -515,17 +515,21 @@ function calendarFile(booking: PublicBooking, profile: PublicProfile): string {
   ].join("\r\n");
 }
 
-function Confirmation({
+/** What the guest sees right after booking; also shown as a sample in the settings preview. */
+export function Confirmation({
   booking,
   profile,
   onAgain,
+  preview = false,
 }: {
   booking: PublicBooking;
   profile: PublicProfile;
-  onAgain: () => void;
+  onAgain?: () => void;
+  preview?: boolean;
 }) {
   const confirmed = booking.status === "confirmed";
-  const ref = useRevealOnMount<HTMLDivElement>(true);
+  const note = profile.page.confirmationNote?.trim();
+  const ref = useRevealOnMount<HTMLDivElement>(!preview);
   const ics = `data:text/calendar;charset=utf-8,${encodeURIComponent(calendarFile(booking, profile))}`;
   return (
     <div ref={ref} className="flex scroll-mt-4 flex-col items-center gap-4 py-4 text-center" role="status">
@@ -554,6 +558,17 @@ function Confirmation({
           </div>
         ))}
       </dl>
+      {note && (
+        <div className="w-full rounded-xl border-l-4 border-[var(--brand)] bg-[var(--brand-soft)] px-4 py-3 text-left">
+          <p className="text-xs font-semibold text-[var(--brand-strong)]">Informazioni dal ristorante</p>
+          <p className="mt-1 whitespace-pre-line text-sm leading-relaxed">{note}</p>
+        </div>
+      )}
+      {booking.emailSent && booking.guestEmail && (
+        <p className="text-xs text-muted">
+          Ti abbiamo inviato il riepilogo a <span className="font-medium text-ink">{booking.guestEmail}</span>
+        </p>
+      )}
       <div className="flex w-full flex-col gap-2">
         {confirmed && (
           <a
@@ -571,13 +586,15 @@ function Confirmation({
             <PhoneLink phone={profile.phone} />
           </p>
         )}
-        <button
-          type="button"
-          onClick={onAgain}
-          className="text-sm font-medium text-[var(--brand-strong)] hover:underline"
-        >
-          Fai un'altra prenotazione
-        </button>
+        {onAgain && (
+          <button
+            type="button"
+            onClick={onAgain}
+            className="text-sm font-medium text-[var(--brand-strong)] hover:underline"
+          >
+            Fai un'altra prenotazione
+          </button>
+        )}
       </div>
     </div>
   );

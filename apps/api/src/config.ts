@@ -20,6 +20,14 @@ const envSchema = z.object({
     .enum(["true", "false"])
     .default("false")
     .transform((v) => v === "true"),
+  /** Sending email (Resend). Both are needed; without them emails are skipped. */
+  RESEND_API_KEY: z.string().min(1).optional(),
+  /** Sender, e.g. "Prenotazioni <prenotazioni@example.com>", on a domain verified in Resend. */
+  EMAIL_FROM: z.string().min(3).optional(),
+  /** Public address of the web app, for links and pictures in emails. */
+  APP_URL: z.url().optional(),
+  /** Set by Vercel: the production domain, used when APP_URL is missing. */
+  VERCEL_PROJECT_PRODUCTION_URL: z.string().optional(),
   /** Apply pending migrations at startup. Production runs `pnpm db:migrate` as a release step instead. */
   AUTO_MIGRATE: z
     .enum(["true", "false"])
@@ -37,6 +45,9 @@ export type AppConfig = {
   corsOrigins: string[];
   autoMigrate: boolean;
   trustProxy: boolean;
+  email: { apiKey: string; from: string } | null;
+  /** e.g. https://app.example.com, without a trailing slash; null when unknown. */
+  publicUrl: string | null;
 };
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -56,5 +67,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     corsOrigins: e.CORS_ORIGINS,
     autoMigrate: env.AUTO_MIGRATE === undefined ? e.NODE_ENV !== "production" : e.AUTO_MIGRATE,
     trustProxy: e.TRUST_PROXY,
+    email: e.RESEND_API_KEY && e.EMAIL_FROM ? { apiKey: e.RESEND_API_KEY, from: e.EMAIL_FROM } : null,
+    publicUrl:
+      e.APP_URL?.replace(/\/$/, "") ??
+      (e.VERCEL_PROJECT_PRODUCTION_URL ? `https://${e.VERCEL_PROJECT_PRODUCTION_URL}` : null),
   };
 }

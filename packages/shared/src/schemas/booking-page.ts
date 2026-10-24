@@ -28,6 +28,11 @@ export const bookingPageFields = z.object({
   brandColor: hexColor,
   /** A few lines shown under the restaurant's name. */
   description: optionalText(600),
+  /**
+   * The restaurant's own words for guests who just booked (rules, delays, parking, deposit...):
+   * shown on the confirmation screen and in the confirmation email.
+   */
+  confirmationNote: optionalText(2000),
   logoId: id.nullable(),
   coverId: id.nullable(),
   photoIds: uniqueIds.max(MAX_GALLERY_PHOTOS, { message: `Al massimo ${MAX_GALLERY_PHOTOS} foto` }),

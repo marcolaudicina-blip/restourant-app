@@ -10,7 +10,7 @@ import type { Channel } from "./schedule.js";
  *
  * Within a kind: higher priority first, then the tightest fit (fewest empty seats), then fewer tables,
  * then the room order (main room first) and the table name. A joined option takes the average
- * priority of its tables.
+ * priority of its tables. Online, tables count with their online capacity (`onlineMaxCovers`).
  */
 
 export type SeatingTable = {
@@ -21,6 +21,8 @@ export type SeatingTable = {
   maxCovers: number;
   priority: number;
   onlineBookable: boolean;
+  /** Online parties up to this size only; null or missing: up to `maxCovers`. */
+  onlineMaxCovers?: number | null;
   combinationOnly: boolean;
   isActive: boolean;
 };
@@ -97,7 +99,9 @@ export function buildSeatingOptions(input: SeatingInput): SeatingOption[] {
     if (allowedRooms && !allowedRooms.has(table.roomId)) continue;
     if (input.roomId && table.roomId !== input.roomId) continue;
     if (channel === "online" && (!table.onlineBookable || !room.onlineBookable)) continue;
-    eligible.set(table.id, table);
+    // Online, a table counts with its online capacity, alone and when joined to others.
+    const onlineMax = channel === "online" ? table.onlineMaxCovers : null;
+    eligible.set(table.id, onlineMax ? { ...table, maxCovers: Math.min(table.maxCovers, onlineMax) } : table);
   }
 
   const options = new Map<string, SeatingOption>();

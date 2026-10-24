@@ -18,7 +18,8 @@ storico modifiche.
 4. ✅ **Pagina di prenotazione pubblica** con colori, logo, copertina e foto del locale, link da
    condividere, pulsante e modulo da inserire nel sito (vedi `pagina-prenotazione.md`). Da fare:
    link per modificare o disdire, versione in inglese, QR code
-5. ⏳ **Email** di conferma, promemoria, modifica e cancellazione
+5. 🔄 **Email**: conferma e richiesta ricevuta per le prenotazioni online, con l'avviso del ristorante
+   (Resend). Da fare: promemoria, modifica e cancellazione, prenotazioni inserite dallo staff
 6. ✅ **Scheda cliente**: creata in automatico dalle prenotazioni e riconosciuta dal telefono, note
    permanenti, etichette, visite / coperti / no-show / cancellazioni, storico, cancellazione con
    anonimizzazione (GDPR). Da fare: importazione clienti da Superb

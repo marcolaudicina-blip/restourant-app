@@ -43,6 +43,8 @@ export const bookingPages = pgTable(
       .references(() => restaurants.id, { onDelete: "cascade" }),
     brandColor: text().notNull(),
     description: text(),
+    /** Shown after booking and in the confirmation email. */
+    confirmationNote: text(),
     logoId: uuid(),
     coverId: uuid(),
     /** Gallery, in display order. Checked against `media` by the service. */

@@ -71,6 +71,10 @@ pnpm db:migrate      # applies migrations to $DATABASE_URL
   engine with `channel: "online"`; `insertReservation` is shared with staff bookings. Only what a guest
   may see leaves these routes (no tables). Page look and pictures are in modules/booking-page;
   pictures are `bytea` rows in `media`, uploaded as data URLs and served immutable by id.
+- **Email** goes through `deps.mailer` (lib/mailer.ts: Resend when `RESEND_API_KEY` + `EMAIL_FROM`
+  are set, otherwise disabled; tests use the memory mailer, `ctx.sentEmails`). Booking emails are in
+  modules/notifications: `sendBookingEmail` never throws and records the outcome in the audit log.
+- Tables may have `onlineMaxCovers`: online seating treats it as the table's capacity (alone and joined).
 - Drizzle uses `casing: "snake_case"`: write camelCase in TypeScript, columns are snake_case.
 
 ## Web app

@@ -170,6 +170,10 @@ test("from sign-up to a full service", async ({ page, browser }, testInfo) => {
   await page.goto("/configurazione/pagina");
   await page.getByRole("button", { name: "Colore Bordeaux" }).click();
   await page.getByLabel("Presentazione").fill("Cucina di casa e pesce del giorno.");
+  await page
+    .getByLabel("Testo dell'avviso")
+    .fill("Il tavolo è garantito per 15 minuti.\nNiente animali, grazie.");
+  await expect(page.getByTestId("booking-preview")).toContainText("Niente animali, grazie.");
   const chooser = page.waitForEvent("filechooser");
   await page.getByRole("button", { name: /Carica logo/ }).click();
   await (await chooser).setFiles({ name: "logo.png", mimeType: "image/png", buffer: PNG });
@@ -193,6 +197,8 @@ test("from sign-up to a full service", async ({ page, browser }, testInfo) => {
   await guest.getByRole("checkbox").check();
   await guest.getByRole("button", { name: "Conferma prenotazione" }).click();
   await expect(guest.getByText("Prenotazione confermata")).toBeVisible();
+  await expect(guest.getByText("Informazioni dal ristorante")).toBeVisible();
+  await expect(guest.getByText("Il tavolo è garantito per 15 minuti.")).toBeVisible();
   await guest.screenshot({ path: testInfo.outputPath("11-prenotazione-online.png"), fullPage: true });
   await guestContext.close();
 

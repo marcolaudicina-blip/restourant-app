@@ -1,6 +1,7 @@
 import { createDatabase } from "@restourant/db";
 import { buildApp } from "./app.js";
 import { loadConfig } from "./config.js";
+import { mailerFromConfig } from "./lib/mailer.js";
 import { createPasswordHasher } from "./lib/passwords.js";
 import { createTokenService } from "./lib/tokens.js";
 
@@ -14,6 +15,8 @@ const app = await buildApp({
     tokens: createTokenService(config.jwtSecret),
     passwords: createPasswordHasher(),
     now: () => new Date(),
+    mailer: mailerFromConfig(config.email),
+    publicUrl: config.publicUrl,
   },
   corsOrigins: config.corsOrigins,
   trustProxy: config.trustProxy,

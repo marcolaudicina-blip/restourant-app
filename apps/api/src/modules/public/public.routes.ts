@@ -46,7 +46,12 @@ export const publicRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) => {
       reply.code(201);
       return {
-        data: await createOnlineReservation(await ctx(request.params.slug), request.body, app.deps.now()),
+        data: await createOnlineReservation(
+          await ctx(request.params.slug),
+          request.body,
+          app.deps,
+          request.log,
+        ),
       };
     },
   );

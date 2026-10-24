@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
+  CircleCheck,
   Copy,
   ExternalLink,
   ImagePlus,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { Confirmation } from "@/components/booking/booking-flow";
 import { BookingPage } from "@/components/booking/booking-page";
 import { useConfigSave } from "@/components/config/use-save";
 import { Button } from "@/components/ui/button";
@@ -23,13 +25,13 @@ import { Field, Textarea } from "@/components/ui/field";
 import { PageLoader, Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast";
 import { api, describeError } from "@/lib/api";
-import { BRAND_PRESETS } from "@/lib/brand";
+import { BRAND_PRESETS, brandStyle } from "@/lib/brand";
 import { cn } from "@/lib/cn";
 import { resizeImage } from "@/lib/images";
 import { mediaUrl } from "@/lib/media";
 import { useBookingPage, useConfig } from "@/lib/queries";
 import { useRestaurant } from "@/lib/restaurant";
-import type { BookingPageSettings, ConfigSnapshot, PublicProfile } from "@/lib/types";
+import type { BookingPageSettings, ConfigSnapshot, PublicBooking, PublicProfile } from "@/lib/types";
 
 export default function BookingPageSettingsPage() {
   const config = useConfig();
@@ -46,6 +48,7 @@ function Editor({ config, saved }: { config: ConfigSnapshot; saved: BookingPageS
   const editable = can("config.write");
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const update = (patch: Partial<BookingPageSettings>) => setDraft((d) => ({ ...d, ...patch }));
+  const [previewMode, setPreviewMode] = useState<PreviewMode>("page");
 
   const r = config.restaurant;
   const policy = config.bookingPolicy;
@@ -63,6 +66,7 @@ function Editor({ config, saved }: { config: ConfigSnapshot; saved: BookingPageS
     page: {
       brandColor: draft.brandColor,
       description: draft.description,
+      confirmationNote: draft.confirmationNote,
       logoId: draft.logoId,
       coverId: draft.coverId,
       photoIds: draft.photoIds,
@@ -85,7 +89,12 @@ function Editor({ config, saved }: { config: ConfigSnapshot; saved: BookingPageS
     await save(
       "PATCH",
       "/booking-page",
-      { ...rest, description: rest.description?.trim() || null, slug: slug.trim().toLowerCase() },
+      {
+        ...rest,
+        description: rest.description?.trim() || null,
+        confirmationNote: rest.confirmationNote?.trim() || null,
+        slug: slug.trim().toLowerCase(),
+      },
       "Pagina di prenotazione salvata",
     ).catch(() => undefined);
   }
@@ -160,6 +169,45 @@ function Editor({ config, saved }: { config: ConfigSnapshot; saved: BookingPageS
           </div>
         </Card>
 
+        <Card>
+          <CardHeader
+            title="Avviso dopo la prenotazione"
+            description="Le tue regole e informazioni utili: compaiono subito dopo la prenotazione e nell'email di conferma."
+          />
+          <div className="flex flex-col gap-3 p-5">
+            <Field
+              label="Testo dell'avviso"
+              hint={`${draft.confirmationNote?.length ?? 0}/2000 · Ritardi, disdette, caparra, parcheggio, allergie, animali…`}
+            >
+              {(id) => (
+                <Textarea
+                  id={id}
+                  maxLength={2000}
+                  rows={6}
+                  value={draft.confirmationNote ?? ""}
+                  onFocus={() => setPreviewMode("confirmation")}
+                  onChange={(e) => update({ confirmationNote: e.target.value })}
+                  placeholder={NOTE_EXAMPLE}
+                />
+              )}
+            </Field>
+            {!draft.confirmationNote?.trim() && (
+              <div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    update({ confirmationNote: NOTE_EXAMPLE });
+                    setPreviewMode("confirmation");
+                  }}
+                >
+                  Parti da un esempio
+                </Button>
+              </div>
+            )}
+          </div>
+        </Card>
+
         <EmbedCard slug={saved.slug} color={saved.brandColor} />
 
         {editable && (
@@ -177,7 +225,7 @@ function Editor({ config, saved }: { config: ConfigSnapshot; saved: BookingPageS
         )}
       </fieldset>
 
-      <Preview profile={profile} />
+      <Preview profile={profile} mode={previewMode} onMode={setPreviewMode} />
     </div>
   );
 }
@@ -573,26 +621,53 @@ function EmbedCard({ slug, color }: { slug: string; color: string }) {
   );
 }
 
-function Preview({ profile }: { profile: PublicProfile }) {
-  const [embed, setEmbed] = useState(false);
+type PreviewMode = "page" | "embed" | "confirmation";
+
+const NOTE_EXAMPLE = `Il tavolo è garantito per 15 minuti dall'orario prenotato: in caso di ritardo avvisaci.
+Per disdire o cambiare la prenotazione chiamaci almeno 2 ore prima.
+Segnalaci allergie o intolleranze: ne terremo conto in cucina.`;
+
+function Preview({
+  profile,
+  mode,
+  onMode,
+}: {
+  profile: PublicProfile;
+  mode: PreviewMode;
+  onMode: (mode: PreviewMode) => void;
+}) {
+  const { today } = useRestaurant();
+  const sample: PublicBooking = {
+    id: "anteprima",
+    status: "confirmed",
+    date: today(),
+    time: "20:00",
+    partySize: 2,
+    durationMinutes: 120,
+    guestName: "Mario Rossi",
+    guestEmail: "mario.rossi@example.com",
+    emailSent: true,
+  };
   return (
     <div className="xl:sticky xl:top-4 xl:self-start">
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold">Anteprima</h2>
         <div className="flex rounded-lg border border-line bg-surface p-0.5 text-xs">
           {(
             [
-              [false, "Pagina", Smartphone],
-              [true, "Nel tuo sito", Monitor],
+              ["page", "Pagina", Smartphone],
+              ["embed", "Nel tuo sito", Monitor],
+              ["confirmation", "Conferma", CircleCheck],
             ] as const
           ).map(([value, label, Icon]) => (
             <button
-              key={label}
+              key={value}
               type="button"
-              onClick={() => setEmbed(value)}
+              onClick={() => onMode(value)}
+              aria-pressed={mode === value}
               className={cn(
-                "flex items-center gap-1 rounded-md px-2.5 py-1 font-medium",
-                embed === value ? "bg-brand-600 text-white" : "text-muted hover:text-ink",
+                "flex items-center gap-1 rounded-md px-2 py-1 font-medium",
+                mode === value ? "bg-brand-600 text-white" : "text-muted hover:text-ink",
               )}
             >
               <Icon className="h-3.5 w-3.5" /> {label}
@@ -604,7 +679,15 @@ function Preview({ profile }: { profile: PublicProfile }) {
         className="mx-auto h-[720px] max-w-[400px] overflow-y-auto rounded-[2rem] border-[10px] border-ink bg-canvas shadow-xl"
         data-testid="booking-preview"
       >
-        <BookingPage profile={profile} embed={embed} preview />
+        {mode === "confirmation" ? (
+          <div style={brandStyle(profile.page.brandColor)} className="@container p-4">
+            <div className="rounded-2xl border border-line bg-surface p-5">
+              <Confirmation booking={sample} profile={profile} preview />
+            </div>
+          </div>
+        ) : (
+          <BookingPage profile={profile} embed={mode === "embed"} preview />
+        )}
       </div>
     </div>
   );

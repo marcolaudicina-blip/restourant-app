@@ -260,3 +260,99 @@ describe("booking page settings", () => {
     expect((await guest.patch(`${owner.base}/booking-page`, { brandColor: "#000000" })).status).toBe(401);
   });
 });
+
+describe("online capacity of a table", () => {
+  it("offers a table online only up to its online maximum", async () => {
+    // T1 (2-4) takes at most 2 people online; staff can still seat 4 there.
+    const res = await owner.api.patch(`${owner.base}/tables/${t.T1!.id}`, { onlineMaxCovers: 2 });
+    expect(res.status).toBe(200);
+    expect(res.body.data.onlineMaxCovers).toBe(2);
+
+    const four = await book({ partySize: 4 });
+    expect(four.status).toBe(201);
+    const [online] = (await owner.api.get(`${owner.base}/reservations?date=${SATURDAY}`)).body.data;
+    expect(online.tables.map((x: { name: string }) => x.name)).not.toContain("T1");
+
+    expect((await book({ partySize: 2, time: "21:00" })).status).toBe(201);
+    const list = (await owner.api.get(`${owner.base}/reservations?date=${SATURDAY}`)).body.data;
+    const two = list.find((r: { time: string }) => r.time === "21:00");
+    expect(two.tables.map((x: { name: string }) => x.name)).toEqual(["T1"]);
+  });
+
+  it("must stay within the table's range", async () => {
+    const res = await owner.api.patch(`${owner.base}/tables/${t.T1!.id}`, { onlineMaxCovers: 6 });
+    expect(res.status).toBe(400);
+    expect(res.body.error.issues[0].path).toBe("onlineMaxCovers");
+    // Lowering the table below its online maximum is refused too.
+    await owner.api.patch(`${owner.base}/tables/${t.T1!.id}`, { onlineMaxCovers: 3 });
+    expect((await owner.api.patch(`${owner.base}/tables/${t.T1!.id}`, { maxCovers: 2 })).status).toBe(400);
+    expect(
+      (await owner.api.patch(`${owner.base}/tables/${t.T1!.id}`, { onlineMaxCovers: null })).status,
+    ).toBe(200);
+  });
+});
+
+describe("confirmation notice and emails", () => {
+  const NOTE = "Il tavolo è garantito per 15 minuti.\nIn caso di ritardo chiamaci <sempre>.";
+  const lastEmail = () => ctx.sentEmails.at(-1)!;
+
+  beforeEach(async () => {
+    await owner.api.patch(`${owner.base}`, { email: "info@osteria.example", phone: "+39 091 000 1111" });
+    await owner.api.patch(`${owner.base}/booking-page`, { confirmationNote: NOTE, brandColor: "#7a1f2b" });
+  });
+
+  it("shows the notice on the public page", async () => {
+    expect((await guest.get(page())).body.data.page.confirmationNote).toBe(NOTE);
+  });
+
+  it("emails the guest a confirmation with the notice", async () => {
+    const before = ctx.sentEmails.length;
+    const res = await book();
+    expect(res.body.data).toMatchObject({ emailSent: true, guestEmail: "lucia@example.com" });
+    expect(ctx.sentEmails).toHaveLength(before + 1);
+    const email = lastEmail();
+    expect(email).toMatchObject({
+      to: "lucia@example.com",
+      fromName: "Osteria Pubblica",
+      replyTo: "info@osteria.example",
+    });
+    expect(email.subject).toBe("Prenotazione confermata · Osteria Pubblica · Sabato 24 ottobre ore 20:00");
+    expect(email.text).toContain("Il tavolo è garantito per 15 minuti.");
+    expect(email.text).toContain("Le tue richieste: Anniversario");
+    // The restaurant's words are escaped and keep their line breaks.
+    expect(email.html).toContain("15 minuti.<br>In caso di ritardo chiamaci &lt;sempre&gt;.");
+    expect(email.html).toContain("background:#7a1f2b");
+    expect(email.html).toContain("https://app.test/prenota/");
+
+    // The outcome is kept in the restaurant's audit log.
+    const log = (await owner.api.get(`${owner.base}/audit-log?limit=5`)).body.data;
+    expect(log.find((e: { entity: string }) => e.entity === "email")?.changes).toMatchObject({
+      kind: "confirmed",
+      to: "lucia@example.com",
+      status: "sent",
+    });
+  });
+
+  it("tells requests apart and confirms them when staff accept", async () => {
+    await policy({ confirmationMode: "manual" });
+    const res = await book();
+    expect(res.body.data.status).toBe("requested");
+    expect(lastEmail().subject).toBe("Richiesta di prenotazione ricevuta · Osteria Pubblica");
+
+    const before = ctx.sentEmails.length;
+    await owner.api.post(`${owner.base}/reservations/${res.body.data.id}/status`, { status: "confirmed" });
+    expect(ctx.sentEmails).toHaveLength(before + 1);
+    expect(lastEmail().subject).toMatch(/^Prenotazione confermata/);
+
+    // Other status changes don't email.
+    await owner.api.post(`${owner.base}/reservations/${res.body.data.id}/status`, { status: "arrived" });
+    expect(ctx.sentEmails).toHaveLength(before + 1);
+  });
+
+  it("emails nobody without an address", async () => {
+    await policy({ requireEmail: false });
+    const before = ctx.sentEmails.length;
+    expect((await book({ guestEmail: null })).status).toBe(201);
+    expect(ctx.sentEmails).toHaveLength(before);
+  });
+});

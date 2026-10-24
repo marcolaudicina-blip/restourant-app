@@ -21,8 +21,10 @@ Il nome pubblico genera lo _slug_ usato negli indirizzi della pagina di prenotaz
 ## 3. Tavoli
 
 Nome/numero (unico nel locale), sala, **coperti min e max**, **priorità** (i tavoli con priorità più
-alta vengono proposti per primi), prenotabile online, **solo in combinazione** (mai da solo), attivo,
-forma e posizione sulla piantina (x, y, larghezza, altezza, rotazione).
+alta vengono proposti per primi), prenotabile online, **max persone online** (facoltativo: es. un
+tavolo da 6 che online si prenota solo fino a 4; lo staff può comunque riempirlo, e quando i tavoli si
+uniscono online conta questo valore), **solo in combinazione** (mai da solo), attivo, forma e
+posizione sulla piantina (x, y, larghezza, altezza, rotazione).
 
 ## 4. Unione dei tavoli
 

@@ -1,5 +1,6 @@
 import type { Database } from "@restourant/db";
 import type { Permission, Role } from "@restourant/shared";
+import type { Mailer } from "./lib/mailer.js";
 import type { PasswordHasher } from "./lib/passwords.js";
 import type { TokenService } from "./lib/tokens.js";
 
@@ -9,6 +10,9 @@ export type AppDeps = {
   passwords: PasswordHasher;
   /** Injected so tests can freeze time. */
   now: () => Date;
+  mailer: Mailer;
+  /** Public address of the web app, for links and pictures in emails; null when unknown. */
+  publicUrl: string | null;
 };
 
 declare module "fastify" {
