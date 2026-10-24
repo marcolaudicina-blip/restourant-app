@@ -52,6 +52,8 @@ const PNG = Buffer.from(
 );
 
 test("from sign-up to a full service", async ({ page, browser }, testInfo) => {
+  // The whole journey of a restaurant, step by step: longer than a usual test.
+  test.setTimeout(90_000);
   const date = nextSaturday();
   const shot = (name: string) =>
     page.screenshot({ path: testInfo.outputPath(`${name}.png`), fullPage: true });
@@ -86,6 +88,26 @@ test("from sign-up to a full service", async ({ page, browser }, testInfo) => {
   await book(page, { party: 6, time: "20:00", name: "Bianchi" });
   await expect(page.getByRole("listitem").filter({ hasText: "Bianchi" })).toContainText("Tavolo T7+T8");
   await shot("03-prenotazioni");
+
+  // Grid view: drag Bianchi one hour later; an empty slot opens a new booking on that table.
+  await page.getByRole("button", { name: "Griglia" }).click();
+  const timeline = page.getByTestId("timeline");
+  await expect(timeline.getByRole("button", { name: /^Rossi, 4 persone/ })).toBeVisible();
+  await shot("03b-griglia");
+  const bianchi = timeline.getByRole("button", { name: /^Bianchi, 6 persone/ }).first();
+  const box = (await bianchi.boundingBox())!;
+  await page.mouse.move(box.x + 12, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 12 + 28 * 4, box.y + box.height / 2, { steps: 8 });
+  await page.mouse.up();
+  await expect(page.getByText("Bianchi: 21:00")).toBeVisible();
+  const lane = (await timeline.getByLabel("Tavolo T3", { exact: true }).boundingBox())!;
+  const visible = (await timeline.boundingBox())!;
+  await page.mouse.click(visible.x + visible.width / 2, lane.y + lane.height / 2);
+  await expect(page.getByRole("dialog", { name: "Nuova prenotazione" })).toContainText("T3");
+  await page.getByRole("dialog").getByRole("button", { name: "Annulla" }).click();
+  await page.getByRole("button", { name: "Lista" }).click();
+  await expect(page.getByRole("listitem").filter({ hasText: "Bianchi" })).toContainText("21:00");
 
   // Staff bookings carry no channel mark; the "online only" filter is empty until guests book online.
   await expect(page.getByRole("listitem").filter({ hasText: "Rossi" })).not.toContainText("Online");
@@ -165,6 +187,15 @@ test("from sign-up to a full service", async ({ page, browser }, testInfo) => {
   // The note now shows on the booking of the day.
   await page.goto(`/prenotazioni?data=${date}`);
   await expect(page.getByRole("listitem").filter({ hasText: "Rossi" })).toContainText("Celiaco");
+
+  // The service sheet to print: the note is there too.
+  await page.getByRole("link", { name: "Stampa il foglio del servizio" }).click();
+  const sheet = page.getByRole("row").filter({ hasText: "Rossi" });
+  await expect(sheet).toContainText("T1");
+  await expect(sheet).toContainText("Celiaco");
+  await page.emulateMedia({ media: "print" });
+  await shot("09b-foglio-servizio");
+  await page.emulateMedia({ media: "screen" });
 
   // Booking page: brand color, logo and a few words, then the link to share.
   await page.goto("/configurazione/pagina");

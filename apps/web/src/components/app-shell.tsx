@@ -71,8 +71,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       timezone={restaurant.data.timezone}
     >
       <ActivityProvider>
-        <div className="min-h-dvh md:pl-60">
-          <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-line bg-surface md:flex">
+        <div className="min-h-dvh md:pl-60 print:pl-0">
+          <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-line bg-surface md:flex print:hidden">
             <div className="flex items-center gap-2 px-5 py-5 text-brand-700">
               <UtensilsCrossed className="h-6 w-6" />
               <span className="text-lg font-semibold tracking-tight">Restourant</span>
@@ -112,9 +112,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
           </aside>
 
-          <main className="mx-auto max-w-7xl px-4 pb-24 pt-5 md:px-8 md:pb-10 md:pt-8">{children}</main>
+          <main className="mx-auto max-w-7xl px-4 pb-24 pt-5 md:px-8 md:pb-10 md:pt-8 print:max-w-none print:p-0">
+            {children}
+          </main>
 
-          <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface md:hidden">
+          <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface md:hidden print:hidden">
             <Nav className="justify-around px-2 py-1.5" compact />
           </nav>
         </div>

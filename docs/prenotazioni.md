@@ -88,6 +88,25 @@ Per il canale online valgono anche: prenotazione online disattivata, date passat
 gruppi oltre il limite online (`large_party_request` / `large_party_phone`), tavoli e sale non
 prenotabili online, blocchi solo online.
 
+## Vista a griglia
+
+In **Prenotazioni** il pulsante **Griglia** mostra la giornata come una tabella: una riga per tavolo
+(divisi per sala), una colonna ogni 15 minuti, una barra per ogni prenotazione colorata secondo lo
+stato. Si apre già sull'ora attuale (oggi) o sulla prima prenotazione; si può limitare a un servizio.
+
+- **Trascinare** una barra di lato cambia l'orario (a passi di 15 minuti), in alto o in basso cambia
+  tavolo. Se il tavolo è troppo piccolo o la fascia è piena il sistema chiede conferma.
+- **Toccare** una barra apre la prenotazione; toccare uno spazio vuoto ne crea una nuova su quel
+  tavolo a quell'ora.
+- Le prenotazioni senza tavolo (richieste di gruppi) stanno in alto in "Senza tavolo".
+- La linea rossa è l'ora attuale. Ogni dispositivo ricorda se preferisce lista o griglia.
+
+## Foglio del servizio
+
+**Stampa** (in Prenotazioni) apre il foglio della giornata per la cucina e l'ingresso: per servizio,
+ora, cliente con etichette (VIP…) e visite, persone, tavolo, telefono, note permanenti del cliente,
+richieste e note interne, stato. È impaginato per A4 orizzontale.
+
 ## Provenienza
 
 Ogni prenotazione ha un canale: `staff` (inserita dal personale), `online` (fatta dal cliente sul

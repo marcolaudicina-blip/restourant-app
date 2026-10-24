@@ -1,8 +1,9 @@
 "use client";
 
 import { isBlockingStatus } from "@restourant/shared";
-import { CalendarPlus, DoorOpen, Globe, Search, Users } from "lucide-react";
-import { useMemo, useState } from "react";
+import { CalendarPlus, DoorOpen, GanttChart, Globe, List, Printer, Search, Users } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/cn";
 import { useConfig, useReservations } from "@/lib/queries";
 import type { Reservation } from "@/lib/types";
@@ -15,8 +16,38 @@ import { PageLoader } from "../ui/spinner";
 import { PendingRequests } from "./pending-requests";
 import { ReservationDialog } from "./reservation-dialog";
 import { ReservationRow } from "./reservation-row";
+import { TimelineView } from "./timeline-view";
 
-type DialogState = { kind: "create"; walkIn?: boolean } | { kind: "edit"; reservation: Reservation } | null;
+type DialogState =
+  | { kind: "create"; walkIn?: boolean; time?: string; tableIds?: string[] }
+  | { kind: "edit"; reservation: Reservation }
+  | null;
+
+type View = "list" | "grid";
+const VIEW_KEY = "rs_bookings_view";
+
+/** List or grid, remembered per device: the tablet at the door and the office PC may differ. */
+function useView(): [View, (view: View) => void] {
+  const [view, setView] = useState<View>("list");
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(VIEW_KEY) === "grid") setView("grid");
+    } catch {
+      // Storage unavailable: start from the list.
+    }
+  }, []);
+  return [
+    view,
+    (next) => {
+      setView(next);
+      try {
+        window.localStorage.setItem(VIEW_KEY, next);
+      } catch {
+        // Not remembered, still switched.
+      }
+    },
+  ];
+}
 
 export function ReservationsView() {
   const { date } = useSelectedDate();
@@ -26,6 +57,7 @@ export function ReservationsView() {
   const [showAll, setShowAll] = useState(false);
   const [onlineOnly, setOnlineOnly] = useState(false);
   const [query, setQuery] = useState("");
+  const [view, setView] = useView();
 
   const all = useMemo(() => reservations.data ?? [], [reservations.data]);
   const active = all.filter((r) => isBlockingStatus(r.status) || r.status === "completed");
@@ -62,6 +94,15 @@ export function ReservationsView() {
         actions={
           <>
             <DateNav />
+            <Link
+              href={`/prenotazioni/stampa?data=${date}`}
+              className="inline-flex h-10 items-center gap-2 rounded-lg border border-line bg-surface px-3 text-sm font-medium hover:bg-canvas"
+              title="Foglio del servizio da stampare"
+              aria-label="Stampa il foglio del servizio"
+            >
+              <Printer className="h-4 w-4" />
+              <span className="hidden sm:inline">Stampa</span>
+            </Link>
             <Button variant="secondary" onClick={() => setDialog({ kind: "create", walkIn: true })}>
               <DoorOpen className="h-4 w-4" /> Walk-in
             </Button>
@@ -82,49 +123,85 @@ export function ReservationsView() {
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="relative min-w-56 flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Cerca per nome o telefono"
-            className="pl-9"
-            aria-label="Cerca"
-          />
-        </div>
-        <div className="flex rounded-lg border border-line bg-surface p-0.5 text-sm">
-          {[
-            { value: false, label: "Attive" },
-            { value: true, label: "Tutte" },
-          ].map((tab) => (
+        <div
+          className="flex rounded-lg border border-line bg-surface p-0.5 text-sm"
+          role="group"
+          aria-label="Vista"
+        >
+          {(
+            [
+              ["list", "Lista", List],
+              ["grid", "Griglia", GanttChart],
+            ] as const
+          ).map(([value, label, Icon]) => (
             <button
-              key={tab.label}
-              onClick={() => setShowAll(tab.value)}
+              key={value}
+              type="button"
+              aria-pressed={view === value}
+              onClick={() => setView(value)}
               className={cn(
-                "rounded-md px-3 py-1.5 font-medium",
-                showAll === tab.value ? "bg-brand-600 text-white" : "text-muted hover:text-ink",
+                "flex items-center gap-1.5 rounded-md px-3 py-1.5 font-medium",
+                view === value ? "bg-brand-600 text-white" : "text-muted hover:text-ink",
               )}
             >
-              {tab.label}
+              <Icon className="h-4 w-4" /> {label}
             </button>
           ))}
         </div>
-        <button
-          onClick={() => setOnlineOnly(!onlineOnly)}
-          aria-pressed={onlineOnly}
-          className={cn(
-            "flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium",
-            onlineOnly
-              ? "border-violet-300 bg-violet-100 text-violet-700"
-              : "border-line bg-surface text-muted hover:text-ink",
-          )}
-        >
-          <Globe className="h-4 w-4" /> Solo online
-        </button>
+        {view === "list" && (
+          <>
+            <div className="relative min-w-56 flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Cerca per nome o telefono"
+                className="pl-9"
+                aria-label="Cerca"
+              />
+            </div>
+            <div className="flex rounded-lg border border-line bg-surface p-0.5 text-sm">
+              {[
+                { value: false, label: "Attive" },
+                { value: true, label: "Tutte" },
+              ].map((tab) => (
+                <button
+                  key={tab.label}
+                  onClick={() => setShowAll(tab.value)}
+                  className={cn(
+                    "rounded-md px-3 py-1.5 font-medium",
+                    showAll === tab.value ? "bg-brand-600 text-white" : "text-muted hover:text-ink",
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setOnlineOnly(!onlineOnly)}
+              aria-pressed={onlineOnly}
+              className={cn(
+                "flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium",
+                onlineOnly
+                  ? "border-violet-300 bg-violet-100 text-violet-700"
+                  : "border-line bg-surface text-muted hover:text-ink",
+              )}
+            >
+              <Globe className="h-4 w-4" /> Solo online
+            </button>
+          </>
+        )}
       </div>
 
       {reservations.isPending ? (
         <PageLoader />
+      ) : view === "grid" ? (
+        <TimelineView
+          date={date}
+          reservations={all}
+          onEdit={(reservation) => setDialog({ kind: "edit", reservation })}
+          onCreate={(preset) => setDialog({ kind: "create", ...preset })}
+        />
       ) : groups.length === 0 ? (
         <Card>
           <EmptyState
@@ -168,7 +245,13 @@ export function ReservationsView() {
 
       {dialog && (
         <ReservationDialog
-          key={dialog.kind === "edit" ? dialog.reservation.id : dialog.walkIn ? "walk-in" : "new"}
+          key={
+            dialog.kind === "edit"
+              ? dialog.reservation.id
+              : dialog.walkIn
+                ? "walk-in"
+                : `new-${dialog.time ?? ""}-${dialog.tableIds?.join() ?? ""}`
+          }
           open
           onClose={() => setDialog(null)}
           mode={dialog}

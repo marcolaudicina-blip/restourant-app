@@ -17,7 +17,10 @@ import { Field, Input, Textarea } from "../ui/field";
 import { useToast } from "../ui/toast";
 import { ChannelBadge } from "./channel-badge";
 
-type Mode = { kind: "create"; walkIn?: boolean } | { kind: "edit"; reservation: Reservation };
+type Mode =
+  /** `time` and `tableIds` pre-fill a new booking, e.g. from an empty slot of the grid. */
+  | { kind: "create"; walkIn?: boolean; time?: string; tableIds?: string[] }
+  | { kind: "edit"; reservation: Reservation };
 
 /** Overrides the API lets staff confirm after a warning. */
 const OVERRIDES: Record<
@@ -67,8 +70,13 @@ export function ReservationDialog({
 
   const [date, setDate] = useState(editing?.date ?? initialDate);
   const [partySize, setPartySize] = useState(editing?.partySize ?? 2);
-  const [time, setTime] = useState<string | null>(editing?.time ?? (walkIn ? nowRounded(timezone) : null));
-  const [manualTables, setManualTables] = useState<string[] | null>(editing ? editing.tableIds : null);
+  const preset = mode.kind === "create" ? mode : null;
+  const [time, setTime] = useState<string | null>(
+    editing?.time ?? preset?.time ?? (walkIn ? nowRounded(timezone) : null),
+  );
+  const [manualTables, setManualTables] = useState<string[] | null>(
+    editing ? editing.tableIds : (preset?.tableIds ?? null),
+  );
   const [warning, setWarning] = useState<{ code: string; message: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [contact, setContact] = useState<GuestContact>({
