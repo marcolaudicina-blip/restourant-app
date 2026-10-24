@@ -12,15 +12,33 @@ sposta su un server dedicato (Railway) impostando `API_URL`, senza toccare il co
 | Build Command   | `pnpm build:vercel` (migrazioni + `next build`) |
 | Install Command | predefinito (pnpm, dalla radice del monorepo)   |
 
+### Domini
+
+| Dominio                                                                                  | Uso                            |
+| ---------------------------------------------------------------------------------------- | ------------------------------ |
+| `app.twentyreserve.com`                                                                  | gestionale e pagine `/prenota` |
+| `twentyreserve.com`, `www.twentyreserve.com`, `twentyreserve.it`, `www.twentyreserve.it` | rimandano a `app.`             |
+
+I domini sono registrati su Aruba; i DNS restano su Aruba con questi record:
+
+| Nome  | Tipo  | Valore                                 |
+| ----- | ----- | -------------------------------------- |
+| `@`   | A     | `216.198.79.1`                         |
+| `www` | CNAME | `25a567978521dc94.vercel-dns-017.com.` |
+| `app` | CNAME | `25a567978521dc94.vercel-dns-017.com.` |
+
+(gli stessi `@` e `www` per `twentyreserve.it`). Il record A di parcheggio di Aruba (`62.149.189.55`)
+va tolto. Quando `twentyreserve.com` diventerà il sito di presentazione basterà togliere il rimando.
+
 ### Variabili d'ambiente
 
-| Variabile                               | Da dove                                                                                             |
-| --------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`, `DATABASE_URL_UNPOOLED` | create dall'integrazione Neon quando colleghi il database                                           |
-| `JWT_SECRET`                            | stringa casuale di almeno 32 caratteri (`openssl rand -base64 48`)                                  |
-| `RESEND_API_KEY`                        | chiave API di [Resend](https://resend.com) per le email ai clienti                                  |
-| `EMAIL_FROM`                            | mittente su un dominio verificato in Resend, es. `Prenotazioni <prenotazioni@tuodominio.it>`        |
-| `APP_URL` (facoltativa)                 | indirizzo pubblico dell'app per link e logo nelle email; di default il dominio di produzione Vercel |
+| Variabile                               | Da dove                                                                                       |
+| --------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`, `DATABASE_URL_UNPOOLED` | create dall'integrazione Neon quando colleghi il database                                     |
+| `JWT_SECRET`                            | stringa casuale di almeno 32 caratteri (`openssl rand -base64 48`)                            |
+| `RESEND_API_KEY`                        | chiave API di [Resend](https://resend.com) per le email ai clienti                            |
+| `EMAIL_FROM`                            | mittente su un dominio verificato in Resend: `TwentyReserve <prenotazioni@twentyreserve.com>` |
+| `APP_URL`                               | `https://app.twentyreserve.com`: indirizzo per link e logo nelle email                        |
 
 Senza `RESEND_API_KEY` ed `EMAIL_FROM` le email non partono (le prenotazioni funzionano comunque, e il
 registro modifiche annota `not_configured`). Mettile solo in Production, così le anteprime non

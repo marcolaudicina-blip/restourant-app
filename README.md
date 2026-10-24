@@ -1,4 +1,6 @@
-# Restourant (nome provvisorio)
+# TwentyReserve
+
+https://app.twentyreserve.com
 
 Gestionale SaaS per ristoranti: prenotazioni online e telefoniche, piantina dei tavoli in tempo reale,
 CRM ospiti. Pensato per essere venduto a più ristoranti (multi-tenant), con il nostro ristorante

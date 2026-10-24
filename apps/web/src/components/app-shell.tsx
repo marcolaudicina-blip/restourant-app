@@ -1,15 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import {
-  CalendarDays,
-  CircleUserRound,
-  Contact,
-  LayoutGrid,
-  LogOut,
-  Settings,
-  UtensilsCrossed,
-} from "lucide-react";
+import { CalendarDays, CircleUserRound, Contact, LayoutGrid, LogOut, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
@@ -20,6 +12,7 @@ import { useMe } from "@/lib/queries";
 import { rememberRestaurant, rememberedRestaurant, RestaurantProvider } from "@/lib/restaurant";
 import type { Restaurant } from "@/lib/types";
 import { ActivityProvider, usePendingRequests } from "./activity";
+import { ProductLogo } from "./product-logo";
 import { Button } from "./ui/button";
 import { EmptyState } from "./ui/card";
 import { PageLoader } from "./ui/spinner";
@@ -73,10 +66,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <ActivityProvider>
         <div className="min-h-dvh md:pl-60 print:pl-0">
           <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-line bg-surface md:flex print:hidden">
-            <div className="flex items-center gap-2 px-5 py-5 text-brand-700">
-              <UtensilsCrossed className="h-6 w-6" />
-              <span className="text-lg font-semibold tracking-tight">Restourant</span>
-            </div>
+            <ProductLogo className="px-5 py-5" />
             <div className="px-3">
               {memberships.length > 1 ? (
                 <select

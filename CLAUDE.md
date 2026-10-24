@@ -4,7 +4,9 @@ Guidance for Claude Code when working in this repository.
 
 ## What this is
 
-A multi-tenant SaaS for restaurant reservations and table management (a Superb / Zenchef alternative).
+**TwentyReserve** (app.twentyreserve.com): a multi-tenant SaaS for restaurant reservations and table
+management (a Superb / Zenchef alternative). The product name lives in
+`apps/web/src/components/product-logo.tsx`; package names (`@restourant/*`) keep the old working name.
 Product docs are in Italian (`docs/`), code and code comments in English.
 
 ## Layout

@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { brandStyle } from "@/lib/brand";
 import { cn } from "@/lib/cn";
 import { mediaUrl } from "@/lib/media";
+import { PRODUCT_NAME } from "../product-logo";
 import type { PublicProfile } from "@/lib/types";
 import { BookingFlow } from "./booking-flow";
 
@@ -304,7 +305,7 @@ function Contacts({ profile }: { profile: PublicProfile }) {
 }
 
 function Footer() {
-  return <p className="pb-6 text-center text-xs text-muted">Prenotazioni online con Restourant</p>;
+  return <p className="pb-6 text-center text-xs text-muted">Prenotazioni online con {PRODUCT_NAME}</p>;
 }
 
 /** Inside an iframe, tells the parent page how tall the widget is (see the embed code). */

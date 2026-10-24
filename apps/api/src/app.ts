@@ -125,7 +125,7 @@ export async function buildApp(options: BuildAppOptions) {
   // Routes opt in with `config.rateLimit`; without the plugin that config is simply ignored.
   if (options.rateLimit !== false) await app.register(rateLimit, { global: false });
   await app.register(swagger, {
-    openapi: { info: { title: "Restourant API", version: "0.1.0" } },
+    openapi: { info: { title: "TwentyReserve API", version: "0.1.0" } },
     transform: jsonSchemaTransform,
   });
 

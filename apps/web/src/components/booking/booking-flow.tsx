@@ -502,9 +502,9 @@ function calendarFile(booking: PublicBooking, profile: PublicProfile): string {
   return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Restourant//Prenotazioni//IT",
+    "PRODID:-//TwentyReserve//Prenotazioni//IT",
     "BEGIN:VEVENT",
-    `UID:${booking.id}@restourant`,
+    `UID:${booking.id}@twentyreserve.com`,
     `DTSTAMP:${stamp(new Date())}`,
     `DTSTART:${stamp(start)}`,
     `DTEND:${stamp(end)}`,
