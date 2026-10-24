@@ -69,6 +69,13 @@ export const bookingPolicyFields = z.object({
   onlinePartyLimits: z.array(onlinePartyLimit).max(30),
   /** Guests can join the waiting list of a full day from the booking page. */
   waitlistEnabled: z.boolean(),
+  /** The day after, email guests "how was it?": happy ones are sent to `reviewUrl`. */
+  reviewRequests: z.boolean(),
+  /** Where happy guests leave a public review, e.g. the Google review link of the restaurant. */
+  reviewUrl: z
+    .url({ protocol: /^https?$/, message: "Indirizzo non valido: copia il link completo (https://…)" })
+    .max(500)
+    .nullable(),
 });
 
 export function checkBookingPolicy(value: z.infer<typeof bookingPolicyFields>, ctx: z.RefinementCtx) {
@@ -116,4 +123,6 @@ export const DEFAULT_BOOKING_POLICY: BookingPolicy = {
   sendReminders: true,
   onlinePartyLimits: [],
   waitlistEnabled: true,
+  reviewRequests: false,
+  reviewUrl: null,
 };

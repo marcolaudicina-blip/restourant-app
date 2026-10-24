@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { AppError } from "../../lib/errors.js";
+import { sendDueReviewRequests } from "../reviews/reviews.service.js";
 import { sendDueReminders } from "./reminders.service.js";
 
 const sameSecret = (a: string, b: string) =>
@@ -13,6 +14,9 @@ export const internalRoutes: FastifyPluginAsyncZod = async (app) => {
     if (!secret) throw new AppError(503, "not_configured", "CRON_SECRET non impostato");
     const given = request.headers.authorization?.replace(/^Bearer\s+/i, "") ?? "";
     if (!sameSecret(given, secret)) throw new AppError(401, "unauthorized", "Non autorizzato");
-    return { data: await sendDueReminders(app.deps, request.log) };
+    // The daily job: tomorrow's reminders and the "how was it?" emails for yesterday.
+    const reminders = await sendDueReminders(app.deps, request.log);
+    const reviews = await sendDueReviewRequests(app.deps, request.log);
+    return { data: { ...reminders, reviews } };
   });
 };

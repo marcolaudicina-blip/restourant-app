@@ -51,6 +51,8 @@ export const bookingPolicies = pgTable(
       .notNull()
       .default([]),
     waitlistEnabled: boolean().notNull().default(true),
+    reviewRequests: boolean().notNull().default(false),
+    reviewUrl: text(),
     ...timestamps,
   },
   (t) => [

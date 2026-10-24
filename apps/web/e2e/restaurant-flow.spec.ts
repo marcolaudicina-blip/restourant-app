@@ -3,8 +3,11 @@ import { expect, test, type Page } from "@playwright/test";
 
 /** Same as playwright.config.ts: signs the guest's link like the API does (TokenService.signBooking). */
 const JWT_SECRET = "e2e-secret-e2e-secret-e2e-secret-e2e";
-const bookingToken = (id: string) =>
-  `${id}.${createHmac("sha256", JWT_SECRET).update(`booking:${id}`).digest("base64url").slice(0, 22)}`;
+const signed = (purpose: "booking" | "review") => (id: string) =>
+  `${id}.${createHmac("sha256", JWT_SECRET).update(`${purpose}:${id}`).digest("base64url").slice(0, 22)}`;
+const bookingToken = signed("booking");
+/** The link behind the stars of the "how was it?" email. */
+const reviewToken = signed("review");
 
 /** Next Saturday from today: the trattoria template serves dinner Tuesday to Sunday. */
 function nextSaturday(): string {
@@ -43,6 +46,13 @@ async function book(
   if (phone) await dialog.getByLabel("Telefono").fill(phone);
   await dialog.getByRole("button", { name: "Prenota" }).click();
   await expect(dialog).toBeHidden();
+}
+
+/** Last Saturday before today: a dinner that already happened. */
+function lastSaturday(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - ((d.getDay() + 1) % 7 || 7));
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 /** "sabato 24 ottobre", as the booking page labels its days. */
@@ -468,6 +478,53 @@ test("a guest joins the waiting list of a full day, and staff book them", async 
   await expect(dialog).toBeHidden();
   await expect(page.getByRole("heading", { name: "Lista d'attesa" })).toBeHidden();
   await expect(page.getByRole("listitem").filter({ hasText: "Anna Neri" })).toContainText("20:00");
+});
+
+test("a guest rates the dinner from the email, and staff read it", async ({ page }, testInfo) => {
+  await register(page, "Trattoria Stelle");
+  await page.getByRole("button", { name: /Trattoria/ }).click();
+  await page.getByRole("button", { name: "Usa questo modello" }).click();
+  await expect(page.getByRole("heading", { name: "Configurazione" })).toBeVisible();
+
+  await page.goto("/configurazione/regole");
+  await page.getByRole("switch", { name: "Chiedi un giudizio il giorno dopo" }).click();
+  await page.getByLabel("Link per le recensioni").fill("https://g.page/r/trattoria-stelle/review");
+  await page.getByRole("button", { name: "Salva regole" }).click();
+  await expect(page.getByText("Regole salvate")).toBeVisible();
+
+  const me = (await (await page.request.get("/api/v1/auth/me")).json()).data;
+  const base = `/api/v1/restaurants/${me.memberships[0].restaurantId}`;
+  const created = await page.request.post(`${base}/reservations`, {
+    data: { date: lastSaturday(), time: "20:00", partySize: 2, guestName: "Lucia Verdi" },
+  });
+  expect(created.status()).toBe(201);
+  const { id } = (await created.json()).data;
+
+  // Five stars, clicked in the email: saved at once, and an invitation to review publicly.
+  const guest = await page.context().browser()!.newPage();
+  await guest.goto(`/recensione/${reviewToken(id)}?voto=5`);
+  await expect(guest.getByText("Grazie per il tuo giudizio!")).toBeVisible();
+  await expect(guest.getByRole("link", { name: "Scrivi una recensione" })).toHaveAttribute(
+    "href",
+    "https://g.page/r/trattoria-stelle/review",
+  );
+  await guest.screenshot({ path: testInfo.outputPath("16-recensione-cliente.png"), fullPage: true });
+
+  // Second thoughts: two stars and a private comment.
+  await guest.getByRole("button", { name: "2 su 5" }).click();
+  await expect(guest.getByText("Ci dispiace")).toBeVisible();
+  await expect(guest.getByRole("link", { name: "Scrivi una recensione" })).toHaveCount(0);
+  await guest.getByLabel("Cosa possiamo migliorare?").fill("Attesa lunga tra le portate");
+  await guest.getByRole("button", { name: "Invia" }).click();
+  await expect(guest.getByText("Grazie, il ristorante leggerà il tuo messaggio.")).toBeVisible();
+  await guest.close();
+
+  await page.goto("/clienti");
+  await page.getByRole("link", { name: "Recensioni" }).click();
+  await expect(page.getByRole("heading", { name: "Recensioni" })).toBeVisible();
+  await expect(page.getByText("Attesa lunga tra le portate")).toBeVisible();
+  await expect(page.getByText("1 giudizio", { exact: false })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("17-recensioni-staff.png"), fullPage: true });
 });
 
 test("the platform admin sees every restaurant and helps one as support", async ({

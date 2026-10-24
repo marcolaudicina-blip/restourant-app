@@ -16,14 +16,24 @@ export type TokenService = {
   signBooking: (reservationId: string) => string;
   /** The reservation id, or null when the link was altered. */
   verifyBooking: (token: string) => string | null;
+  /** Same, for the "how was it?" link the day after (it can't be used to manage the booking). */
+  signReview: (reservationId: string) => string;
+  verifyReview: (token: string) => string | null;
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 export function createTokenService(secret: string): TokenService {
   const key = new TextEncoder().encode(secret);
-  const bookingSignature = (id: string) =>
-    createHmac("sha256", secret).update(`booking:${id}`).digest("base64url").slice(0, 22);
+  const signature = (purpose: "booking" | "review", id: string) =>
+    createHmac("sha256", secret).update(`${purpose}:${id}`).digest("base64url").slice(0, 22);
+  const verify = (purpose: "booking" | "review", token: string) => {
+    const [id = "", given = ""] = token.split(".");
+    if (!UUID.test(id)) return null;
+    const expected = Buffer.from(signature(purpose, id));
+    const actual = Buffer.from(given);
+    return actual.length === expected.length && timingSafeEqual(actual, expected) ? id : null;
+  };
   return {
     sign: (userId, version = 0) =>
       new SignJWT({ ver: version })
@@ -42,13 +52,9 @@ export function createTokenService(secret: string): TokenService {
         return null;
       }
     },
-    signBooking: (id) => `${id}.${bookingSignature(id)}`,
-    verifyBooking: (token) => {
-      const [id = "", signature = ""] = token.split(".");
-      if (!UUID.test(id)) return null;
-      const expected = Buffer.from(bookingSignature(id));
-      const given = Buffer.from(signature);
-      return given.length === expected.length && timingSafeEqual(given, expected) ? id : null;
-    },
+    signBooking: (id) => `${id}.${signature("booking", id)}`,
+    verifyBooking: (token) => verify("booking", token),
+    signReview: (id) => `${id}.${signature("review", id)}`,
+    verifyReview: (token) => verify("review", token),
   };
 }

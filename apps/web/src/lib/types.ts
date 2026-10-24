@@ -222,6 +222,33 @@ export type WaitlistEntry = {
   createdAt: string;
 };
 
+export type ReviewView = {
+  restaurant: { name: string; slug: string; brandColor: string; logoId: string | null };
+  booking: { date: string; partySize: number; guestName: string; locale: "it" | "en" };
+  rating: number | null;
+  feedback: string | null;
+  /** Shown once the guest gave a good rating. */
+  publicReviewUrl: string | null;
+};
+
+export type ReviewSummary = {
+  count: number;
+  average: number | null;
+  /** How many 1, 2, 3, 4 and 5 star ratings. */
+  byRating: number[];
+  requested: number;
+  reviews: {
+    reservationId: string;
+    guestId: string | null;
+    guestName: string;
+    date: string;
+    partySize: number;
+    rating: number;
+    feedback: string | null;
+    ratedAt: string;
+  }[];
+};
+
 export type PublicBooking = {
   id: string;
   status: "confirmed" | "requested";

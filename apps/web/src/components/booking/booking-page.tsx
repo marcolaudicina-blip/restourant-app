@@ -148,7 +148,13 @@ export function LanguageSwitch({ dark = false, embed = false }: { dark?: boolean
   );
 }
 
-export function Logo({ profile, size }: { profile: PublicProfile; size: "sm" | "lg" }) {
+export function Logo({
+  profile,
+  size,
+}: {
+  profile: Pick<PublicProfile, "name"> & { page: Pick<PublicProfile["page"], "logoId"> };
+  size: "sm" | "lg";
+}) {
   const { t } = useGuestText();
   const box = size === "lg" ? "h-16 w-16 @3xl:h-20 @3xl:w-20 rounded-2xl" : "h-11 w-11 rounded-xl";
   if (profile.page.logoId) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { Contact, Search, UserPlus } from "lucide-react";
+import { Contact, Search, Star, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
@@ -27,9 +27,17 @@ export default function GuestsPage() {
         title="Clienti"
         description="Si creano da soli con le prenotazioni: il cliente viene riconosciuto dal numero di telefono."
         actions={
-          <Button onClick={() => setCreating(true)}>
-            <UserPlus className="h-4 w-4" /> Nuovo cliente
-          </Button>
+          <>
+            <Link
+              href="/clienti/recensioni"
+              className="inline-flex h-10 items-center gap-2 rounded-lg border border-line bg-surface px-4 text-sm font-medium hover:bg-canvas"
+            >
+              <Star className="h-4 w-4" /> Recensioni
+            </Link>
+            <Button onClick={() => setCreating(true)}>
+              <UserPlus className="h-4 w-4" /> Nuovo cliente
+            </Button>
+          </>
         }
       />
       <div className="relative mb-4">

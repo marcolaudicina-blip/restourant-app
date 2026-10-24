@@ -162,6 +162,21 @@ quando arriva una richiesta dal sito) e può aggiungere persone a mano (pulsante
 o togliere. Una prenotazione con lo stesso telefono o email in quel giorno toglie la persona dalla
 lista ("ha prenotato").
 
+## Recensioni dopo la cena
+
+Con **Chiedi un giudizio il giorno dopo** (Configurazione → Regole) ogni mattina, insieme ai
+promemoria, parte un'email "Com'è andata?" a chi ha cenato il giorno prima e ha lasciato l'email
+(prenotazioni confermate, arrivate, sedute o concluse: mai a no-show e cancellazioni), una volta sola.
+Un clic sulle stelle apre `/recensione/<codice>?voto=N` e salva subito il voto:
+
+- **4 o 5 stelle**: ringraziamento e pulsante **Scrivi una recensione** verso il **Link per le
+  recensioni** (es. il link "Chiedi recensioni" di Google Business Profile);
+- **da 1 a 3**: "Cosa possiamo migliorare?", un commento che legge solo il ristorante.
+
+Il cliente può cambiare voto e commento quando vuole. Il codice è firmato come quello di gestione
+(con uno scopo diverso, quindi non serve a modificare la prenotazione). Lo staff trova tutto in
+**Clienti → Recensioni**: media, distribuzione delle stelle, percentuale di risposte e commenti.
+
 ## API
 
 Senza autenticazione, sotto `/v1/public`, con limiti per IP (120 letture e 10 prenotazioni al minuto):
@@ -180,7 +195,8 @@ Senza autenticazione, sotto `/v1/public`, con limiti per IP (120 letture e 10 pr
 
 Per lo staff: `GET`/`PATCH /restaurants/:id/booking-page` e `POST /restaurants/:id/media`
 (`{ dataUrl }`); lista d'attesa: `GET /restaurants/:id/waitlist?date`, `POST /waitlist`,
-`PATCH /waitlist/:id` (anche `status: "removed"`), `POST /waitlist/:id/notify`.
+`PATCH /waitlist/:id` (anche `status: "removed"`), `POST /waitlist/:id/notify`; recensioni:
+`GET /restaurants/:id/reviews`. Pubbliche: `GET`/`POST /reviews/:token` (`{ rating, feedback }`).
 
 ## Da fare
 

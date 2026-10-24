@@ -61,6 +61,12 @@ export const reservations = pgTable(
     locale: localeEnum().notNull().default("it"),
     /** When the day-before reminder went out; it is sent once. */
     reminderSentAt: timestamp({ withTimezone: true }),
+    /** When the "how was it?" email went out, the day after. */
+    reviewRequestedAt: timestamp({ withTimezone: true }),
+    /** The guest's own rating (1-5) and private comment, from the link in that email. */
+    rating: integer(),
+    feedback: text(),
+    ratedAt: timestamp({ withTimezone: true }),
     ...timestamps,
   },
   (t) => [
@@ -76,6 +82,8 @@ export const reservations = pgTable(
     index().on(t.restaurantId, t.updatedAt),
     check("reservations_party_size", sql`${t.partySize} >= 1`),
     check("reservations_window", sql`${t.endsAt} > ${t.startsAt}`),
+    check("reservations_rating", sql`${t.rating} between 1 and 5`),
+    index().on(t.restaurantId, t.ratedAt),
   ],
 );
 

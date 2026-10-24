@@ -32,6 +32,7 @@ function RulesForm({ policy }: { policy: BookingPolicy }) {
     emailStaffBookings: policy.emailStaffBookings,
     sendReminders: policy.sendReminders,
     waitlistEnabled: policy.waitlistEnabled,
+    reviewRequests: policy.reviewRequests,
   });
   const [confirmationMode, setConfirmationMode] = useState(policy.confirmationMode);
   const [limits, setLimits] = useState<OnlinePartyLimit[]>(policy.onlinePartyLimits);
@@ -60,6 +61,7 @@ function RulesForm({ policy }: { policy: BookingPolicy }) {
         slotIntervalMinutes: num("slotIntervalMinutes"),
         defaultDurationMinutes: num("defaultDurationMinutes"),
         policyText: String(data.get("policyText") ?? "").trim() || null,
+        reviewUrl: String(data.get("reviewUrl") ?? "").trim() || null,
         onlinePartyLimits: limits.map((l) => ({ ...l, daysOfWeek: [...l.daysOfWeek].sort() })),
       },
       "Regole salvate",
@@ -219,6 +221,25 @@ function RulesForm({ policy }: { policy: BookingPolicy }) {
               description="Nei giorni pieni il cliente può mettersi in lista: se qualcuno disdice gli mandiamo un'email per prenotare."
               {...flag("waitlistEnabled")}
             />
+            <Switch
+              label="Chiedi un giudizio il giorno dopo"
+              description="Email con le stelle a chi ha cenato ieri. Chi è contento viene invitato a lasciare una recensione, gli altri scrivono solo a voi."
+              {...flag("reviewRequests")}
+            />
+            <Field
+              label="Link per le recensioni"
+              hint="Da Google Business Profile → «Chiedi recensioni» (oppure TripAdvisor)."
+            >
+              {(id) => (
+                <Input
+                  id={id}
+                  name="reviewUrl"
+                  type="url"
+                  placeholder="https://g.page/r/…/review"
+                  defaultValue={policy.reviewUrl ?? ""}
+                />
+              )}
+            </Field>
           </div>
         </Card>
 

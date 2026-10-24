@@ -90,6 +90,11 @@ pnpm db:migrate      # applies migrations to $DATABASE_URL
   `waitlistAfterStaffChange` in reservation routes), which emails "a table is free" to entries still
   `waiting` whose window has free online times. `insertReservation` marks entries with the same phone
   or email on that day `booked` (waitlist-match.ts). Web: `WaitlistPanel` in the day view.
+- **Reviews** (modules/reviews): the same daily job also emails "how was it?" for yesterday's bookings
+  (policy `reviewRequests`, once per booking via `reservations.review_requested_at`). Stars link to
+  `/recensione/<id>.<hmac>` (`TokenService.signReview`, a different purpose from `signBooking`);
+  ratings ≥ 4 get the policy's `reviewUrl`, the rest leave private feedback. Staff: `GET /reviews`,
+  web `/clienti/recensioni`.
 - **Platform admin** (modules/admin, `/v1/admin/*`, web `/admin`): users whose email is in
   `PLATFORM_ADMIN_EMAILS` (`deps.platformAdmins`); others get 404. Support access is a manager
   membership with `support = true`, audited in the restaurant (`support_access`). See `docs/admin.md`.

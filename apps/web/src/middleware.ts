@@ -5,7 +5,7 @@ const PUBLIC_PATHS = ["/login", "/registrati", "/password-dimenticata"];
  * Open to everyone, signed in or not: guests' booking pages and their own bookings, invitation and
  * password links.
  */
-const OPEN_PATHS = ["/prenota/", "/prenotazione/", "/invito/", "/reimposta-password/"];
+const OPEN_PATHS = ["/prenota/", "/prenotazione/", "/recensione/", "/invito/", "/reimposta-password/"];
 
 /** The showcase site and the pages it links to, open to everyone. */
 const SITE_PATHS = ["/sito"];

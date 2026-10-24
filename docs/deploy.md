@@ -44,7 +44,7 @@ va tolto. Quando `twentyreserve.com` diventerà il sito di presentazione baster�
 
 Senza `RESEND_API_KEY` ed `EMAIL_FROM` le email non partono (le prenotazioni funzionano comunque, e il
 registro modifiche annota `not_configured`). Mettile solo in Production, così le anteprime non
-scrivono mai ai clienti. Senza `CRON_SECRET` il job dei promemoria (`apps/web/vercel.json`, ogni
+scrivono mai ai clienti. Senza `CRON_SECRET` il job giornaliero (promemoria e richieste di recensione, `apps/web/vercel.json`, ogni
 giorno alle 8:00 UTC) risponde 503 e non manda nulla.
 
 ### Anteprime

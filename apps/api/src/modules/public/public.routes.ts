@@ -4,11 +4,13 @@ import {
   onlineReservationInput,
   onlineWaitlistInput,
   partySize,
+  reviewInput,
 } from "@restourant/shared";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { idParams } from "../../lib/http.js";
 import { getMedia } from "../booking-page/booking-page.service.js";
+import { getReviewPage, reviewContext, saveReview } from "../reviews/reviews.service.js";
 import { joinWaitlistOnline } from "../waitlist/waitlist.service.js";
 import {
   cancelGuestBooking,
@@ -114,6 +116,23 @@ export const publicRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request) => {
       const { ctx, id } = await booking(request.params.token);
       return { data: await changeGuestBooking(ctx, id, request.body, app.deps, request.log) };
+    },
+  );
+
+  // "How was it?", from the link in the email the day after.
+  const review = (token: string) => reviewContext(app.deps.db, app.deps.tokens, token);
+
+  app.get("/reviews/:token", { schema: { params: tokenParams }, config: READ_LIMIT }, async (request) => {
+    const { ctx, id } = await review(request.params.token);
+    return { data: await getReviewPage(ctx, id) };
+  });
+
+  app.post(
+    "/reviews/:token",
+    { schema: { params: tokenParams, body: reviewInput }, config: BOOK_LIMIT },
+    async (request) => {
+      const { ctx, id } = await review(request.params.token);
+      return { data: await saveReview(ctx, id, request.body, app.deps.now()) };
     },
   );
 

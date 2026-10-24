@@ -39,6 +39,7 @@ import { tableBlockRoutes } from "./modules/table-blocks/table-blocks.routes.js"
 import { tableRoutes } from "./modules/tables/tables.routes.js";
 import { teamRoutes } from "./modules/team/team.routes.js";
 import { waitlistRoutes } from "./modules/waitlist/waitlist.routes.js";
+import { reviewRoutes } from "./modules/reviews/reviews.routes.js";
 import type { AppDeps } from "./types.js";
 
 export type BuildAppOptions = {
@@ -161,6 +162,7 @@ export async function buildApp(options: BuildAppOptions) {
           await scope.register(setupRoutes);
           await scope.register(reservationRoutes);
           await scope.register(waitlistRoutes);
+          await scope.register(reviewRoutes);
           await scope.register(guestRoutes);
           await scope.register(bookingPageRoutes);
           await scope.register(teamRoutes);

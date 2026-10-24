@@ -40,6 +40,8 @@ const ENTITY_LABELS: Record<string, string> = {
   service: "Servizio",
   guest: "Cliente",
   restaurant: "Dati del locale",
+  waitlist: "Lista d'attesa",
+  review: "Recensione",
 };
 
 export default function AdminPage() {

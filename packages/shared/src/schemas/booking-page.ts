@@ -95,3 +95,12 @@ export const guestBookingChangeInput = z.object({
 });
 
 export type GuestBookingChangeInput = z.infer<typeof guestBookingChangeInput>;
+
+/** The guest's answer to "how was it?" (link in the email the day after). */
+export const reviewInput = z.object({
+  rating: z.number().int().min(1).max(5),
+  /** Private: only the restaurant reads it. */
+  feedback: optionalText(2000).optional(),
+});
+
+export type ReviewInput = z.infer<typeof reviewInput>;
