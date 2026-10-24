@@ -94,6 +94,15 @@ l'online.
 | Cancellazione e modifica dal cliente | sì, fino a 2 ore prima                             |
 | Contatti obbligatori                 | telefono ed email (almeno uno)                     |
 | Testo della policy                   | libero                                             |
+| Persone per fascia oraria            | nessun limite                                      |
+| Email per prenotazioni dello staff   | sì                                                 |
+| Promemoria il giorno prima           | sì                                                 |
+
+**Persone per fascia oraria**: righe del tipo "sab e dom, arrivi dalle 19:00 alle 20:00 (compreso),
+online al massimo 6 persone" (`onlinePartyLimits`, fino a 30). In quegli orari i gruppi più grandi non
+vedono gli orari sulla pagina pubblica, non possono prenotarli né spostarci la loro prenotazione;
+negli altri orari vale il massimo online generale. Se più fasce si sovrappongono vale la più
+restrittiva. Lo staff può sempre inserirli (motivo `party_size_limit` nella disponibilità online).
 
 ## 11. Utenti e ruoli
 

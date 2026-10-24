@@ -1,12 +1,15 @@
 "use client";
 
-import { SLOT_INTERVALS, type BookingPolicy } from "@restourant/shared";
+import { SLOT_INTERVALS, type BookingPolicy, type OnlinePartyLimit } from "@restourant/shared";
+import { Plus, Trash2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useConfigSave } from "@/components/config/use-save";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Field, Input, Select, Switch, Textarea } from "@/components/ui/field";
 import { PageLoader } from "@/components/ui/spinner";
+import { cn } from "@/lib/cn";
+import { WEEKDAYS } from "@/lib/labels";
 import { useConfig } from "@/lib/queries";
 import { useRestaurant } from "@/lib/restaurant";
 
@@ -30,6 +33,7 @@ function RulesForm({ policy }: { policy: BookingPolicy }) {
     sendReminders: policy.sendReminders,
   });
   const [confirmationMode, setConfirmationMode] = useState(policy.confirmationMode);
+  const [limits, setLimits] = useState<OnlinePartyLimit[]>(policy.onlinePartyLimits);
   const flag = (name: keyof typeof flags) => ({
     checked: flags[name],
     onChange: (v: boolean) => setFlags((f) => ({ ...f, [name]: v })),
@@ -55,6 +59,7 @@ function RulesForm({ policy }: { policy: BookingPolicy }) {
         slotIntervalMinutes: num("slotIntervalMinutes"),
         defaultDurationMinutes: num("defaultDurationMinutes"),
         policyText: String(data.get("policyText") ?? "").trim() || null,
+        onlinePartyLimits: limits.map((l) => ({ ...l, daysOfWeek: [...l.daysOfWeek].sort() })),
       },
       "Regole salvate",
     ).catch(() => undefined);
@@ -164,6 +169,14 @@ function RulesForm({ policy }: { policy: BookingPolicy }) {
 
         <Card>
           <CardHeader
+            title="Persone per fascia oraria"
+            description="Limita i gruppi online in certi orari, es. dalle 19:00 alle 20:00 al massimo 6 persone. Lo staff può sempre inserirli."
+          />
+          <PartyLimits limits={limits} onChange={setLimits} max={policy.maxPartyOnline} />
+        </Card>
+
+        <Card>
+          <CardHeader
             title="Modifiche e cancellazioni"
             description="Il cliente lo fa dal pulsante “Gestisci la prenotazione” nelle email: lo staff riceve un avviso."
           />
@@ -248,5 +261,103 @@ function RulesForm({ policy }: { policy: BookingPolicy }) {
         </div>
       </fieldset>
     </form>
+  );
+}
+
+/** "Arrivals from … to … (included), on these days: online at most N people", one row each. */
+function PartyLimits({
+  limits,
+  onChange,
+  max,
+}: {
+  limits: OnlinePartyLimit[];
+  onChange: (limits: OnlinePartyLimit[]) => void;
+  max: number;
+}) {
+  const update = (i: number, patch: Partial<OnlinePartyLimit>) =>
+    onChange(limits.map((l, j) => (j === i ? { ...l, ...patch } : l)));
+  return (
+    <div className="flex flex-col gap-3 p-5">
+      {limits.length === 0 && (
+        <p className="text-sm text-muted">
+          Nessun limite: online vale il massimo di {max} persone a ogni orario.
+        </p>
+      )}
+      {limits.map((limit, i) => (
+        <div
+          key={i}
+          role="group"
+          aria-label={`Fascia ${i + 1}`}
+          className="flex flex-wrap items-end gap-3 rounded-xl border border-line p-3"
+        >
+          <div className="flex flex-wrap gap-1">
+            {WEEKDAYS.map((d) => {
+              const on = limit.daysOfWeek.includes(d.value);
+              return (
+                <button
+                  key={d.value}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() =>
+                    update(i, {
+                      daysOfWeek: on
+                        ? limit.daysOfWeek.filter((x) => x !== d.value)
+                        : [...limit.daysOfWeek, d.value],
+                    })
+                  }
+                  className={cn(
+                    "w-11 rounded-lg border py-1.5 text-xs font-medium",
+                    on ? "border-brand-600 bg-brand-600 text-white" : "border-line",
+                  )}
+                >
+                  {d.short}
+                </button>
+              );
+            })}
+          </div>
+          <label className="flex flex-col gap-1 text-xs text-muted">
+            Arrivi dalle
+            <Input type="time" value={limit.from} onChange={(e) => update(i, { from: e.target.value })} />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-muted">
+            alle (compreso)
+            <Input type="time" value={limit.to} onChange={(e) => update(i, { to: e.target.value })} />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-muted">
+            Max persone online
+            <Input
+              type="number"
+              min={1}
+              max={100}
+              className="w-24"
+              value={limit.maxParty}
+              onChange={(e) => update(i, { maxParty: Number(e.target.value) })}
+            />
+          </label>
+          <Button
+            type="button"
+            variant="ghost"
+            aria-label={`Elimina fascia ${i + 1}`}
+            onClick={() => onChange(limits.filter((_, j) => j !== i))}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      ))}
+      <div>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() =>
+            onChange([
+              ...limits,
+              { daysOfWeek: [1, 2, 3, 4, 5, 6, 7], from: "19:00", to: "20:00", maxParty: Math.min(6, max) },
+            ])
+          }
+        >
+          <Plus className="h-4 w-4" /> Aggiungi fascia
+        </Button>
+      </div>
+    </div>
   );
 }

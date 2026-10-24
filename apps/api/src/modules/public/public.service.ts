@@ -30,6 +30,7 @@ import {
 } from "../calendar-exceptions/calendar-exceptions.service.js";
 import {
   computeAvailability,
+  exceedsOnlineLimit,
   onlineDayReason,
   seatingOptions,
   type OnlineDayReason,
@@ -159,7 +160,7 @@ export function onlineOffer(floor: FloorContext, date: string, partySize: number
           serviceId: day.serviceId,
           name: day.name,
           slots: day.slots
-            .filter((time) => timeToMinutes(time) >= notBefore)
+            .filter((time) => timeToMinutes(time) >= notBefore && !exceedsOnlineLimit(floor, time, partySize))
             .map((time) => ({ time, available: true, reason: null, option: null, durationMinutes: null })),
         })),
     };

@@ -18,6 +18,7 @@ import Link from "next/link";
 import { useRef, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { Confirmation } from "@/components/booking/booking-flow";
 import { BookingPage } from "@/components/booking/booking-page";
+import { QrCard } from "@/components/config/qr-card";
 import { useConfigSave } from "@/components/config/use-save";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -52,6 +53,7 @@ function Editor({ config, saved }: { config: ConfigSnapshot; saved: BookingPageS
 
   const r = config.restaurant;
   const policy = config.bookingPolicy;
+  const origin = useOrigin();
   const profile: PublicProfile = {
     // Times in the preview come from the saved address, which already works.
     slug: saved.slug,
@@ -208,6 +210,12 @@ function Editor({ config, saved }: { config: ConfigSnapshot; saved: BookingPageS
           </div>
         </Card>
 
+        <QrCard
+          url={`${origin}/prenota/${saved.slug}`}
+          slug={saved.slug}
+          name={r.name}
+          color={saved.brandColor}
+        />
         <EmbedCard slug={saved.slug} color={saved.brandColor} />
 
         {editable && (

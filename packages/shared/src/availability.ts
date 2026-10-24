@@ -36,7 +36,9 @@ export type SlotUnavailableReason =
   /** Too many bookings arriving in this slot. */
   | "pacing_bookings"
   /** Suitable tables exist but are all occupied or blocked at this time. */
-  | "tables_taken";
+  | "tables_taken"
+  /** Online only: at this arrival time the restaurant takes smaller parties (onlinePartyLimits). */
+  | "party_size_limit";
 
 export type SlotAvailability = {
   time: string;
@@ -156,4 +158,24 @@ export function computeSlotAvailability(input: SlotAvailabilityInput): SlotAvail
       durationMinutes: free.durationMinutes,
     };
   });
+}
+
+/**
+ * The largest party guests may book online for an arrival on `weekday` at `minutes` (wall clock),
+ * or null when no limit applies. Overlapping limits: the strictest wins.
+ */
+export function onlinePartyLimitAt(
+  limits: readonly { daysOfWeek: readonly number[]; from: string; to: string; maxParty: number }[],
+  weekday: number,
+  minutes: number,
+): number | null {
+  let limit: number | null = null;
+  for (const rule of limits) {
+    if (!rule.daysOfWeek.includes(weekday)) continue;
+    // Arrivals after midnight belong to the evening before: compare within the day.
+    const time = minutes % 1440;
+    if (time < timeToMinutes(rule.from) || time > timeToMinutes(rule.to)) continue;
+    limit = limit === null ? rule.maxParty : Math.min(limit, rule.maxParty);
+  }
+  return limit;
 }

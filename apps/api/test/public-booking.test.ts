@@ -197,6 +197,53 @@ describe("booking from the public page", () => {
   });
 });
 
+describe("party limits by arrival time", () => {
+  // Saturday: from 19:00 to 20:00 online only up to 4 people (T2+T3 seat 7).
+  beforeEach(async () => {
+    const res = await policy({
+      onlinePartyLimits: [{ daysOfWeek: [6], from: "19:00", to: "20:00", maxParty: 4 }],
+    });
+    expect(res.status).toBe(200);
+  });
+  const times = async (partySize: number, date = SATURDAY) =>
+    (await guest.get(`${page()}/availability?date=${date}&partySize=${partySize}`)).body.data.services[0]
+      .times as string[];
+
+  it("offers bigger parties only outside the limited hours", async () => {
+    const seven = await times(7);
+    expect(seven).not.toContain("19:00");
+    expect(seven).not.toContain("20:00");
+    expect(seven).toContain("20:15");
+    expect(await times(4)).toContain("19:30");
+    // Other days are not limited.
+    expect(await times(7, "2026-10-25")).toContain("19:30");
+  });
+
+  it("refuses such bookings online, but staff can still take them", async () => {
+    const res = await book({ time: "19:30", partySize: 7 });
+    expect(res.status).toBe(409);
+    const staff = await owner.api.get(
+      `${owner.base}/availability?date=${SATURDAY}&partySize=7&channel=staff`,
+    );
+    expect(
+      staff.body.data.services[0].slots.find((s: { time: string }) => s.time === "19:30").available,
+    ).toBe(true);
+    const online = await owner.api.get(
+      `${owner.base}/availability?date=${SATURDAY}&partySize=7&channel=online`,
+    );
+    expect(online.body.data.services[0].slots.find((s: { time: string }) => s.time === "19:30").reason).toBe(
+      "party_size_limit",
+    );
+  });
+
+  it("validates the hours", async () => {
+    const res = await policy({
+      onlinePartyLimits: [{ daysOfWeek: [6], from: "21:00", to: "20:00", maxParty: 4 }],
+    });
+    expect(res.status).toBe(400);
+  });
+});
+
 describe("booking page settings", () => {
   it("saves the look and the link", async () => {
     const res = await owner.api.patch(`${owner.base}/booking-page`, {

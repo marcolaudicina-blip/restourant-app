@@ -4,6 +4,9 @@ import {
   computeSlotAvailability,
   indexBusy,
   instantToLocal,
+  isoWeekday,
+  onlinePartyLimitAt,
+  timeToMinutes,
   type Channel,
   type SeatingOption,
   type SlotUnavailableReason,
@@ -59,6 +62,16 @@ export function onlineDayReason(
   return null;
 }
 
+/** True when the restaurant takes only smaller parties online at this arrival time. */
+export function exceedsOnlineLimit(floor: FloorContext, time: string, partySize: number): boolean {
+  const limit = onlinePartyLimitAt(
+    floor.policy.onlinePartyLimits,
+    isoWeekday(floor.date),
+    timeToMinutes(time),
+  );
+  return limit !== null && partySize > limit;
+}
+
 export function computeAvailability(floor: FloorContext, query: AvailabilityQuery, now: Date) {
   const dayReason = query.channel === "online" ? onlineDayReason(floor, query, now) : null;
   const busy = indexBusy(floor.busy, query.channel);
@@ -90,7 +103,17 @@ export function computeAvailability(floor: FloorContext, query: AvailabilityQuer
       pacing: service,
       slotIntervalMinutes: service.slotIntervalMinutes ?? floor.policy.slotIntervalMinutes,
       notBefore,
-    });
+    }).map((slot) =>
+      slot.available && query.channel === "online" && exceedsOnlineLimit(floor, slot.time, query.partySize)
+        ? {
+            ...slot,
+            available: false,
+            reason: "party_size_limit" as const,
+            option: null,
+            durationMinutes: null,
+          }
+        : slot,
+    );
     return { ...base, status: "open" as const, reason: null, note: null, slots };
   });
 
@@ -108,4 +131,5 @@ export const SLOT_REASON_MESSAGES: Record<SlotUnavailableReason, string> = {
   pacing_covers: "Troppi coperti in arrivo in questa fascia oraria",
   pacing_bookings: "Troppe prenotazioni in arrivo in questa fascia oraria",
   tables_taken: "Tutti i tavoli adatti sono occupati",
+  party_size_limit: "In questa fascia oraria online si prenota per meno persone",
 };

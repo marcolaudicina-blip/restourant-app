@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { boolean, check, integer, pgTable, text, uuid } from "drizzle-orm/pg-core";
+import { boolean, check, integer, jsonb, pgTable, text, uuid } from "drizzle-orm/pg-core";
 import { primaryId, timestamps } from "./columns.js";
 import { confirmationModeEnum, largePartyModeEnum, localeEnum } from "./enums.js";
 
@@ -46,6 +46,10 @@ export const bookingPolicies = pgTable(
     policyText: text(),
     emailStaffBookings: boolean().notNull().default(true),
     sendReminders: boolean().notNull().default(true),
+    onlinePartyLimits: jsonb()
+      .$type<{ daysOfWeek: number[]; from: string; to: string; maxParty: number }[]>()
+      .notNull()
+      .default([]),
     ...timestamps,
   },
   (t) => [

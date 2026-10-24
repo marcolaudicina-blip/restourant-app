@@ -3,6 +3,7 @@ import {
   buildSeatingOptions,
   computeSlotAvailability,
   indexBusy,
+  onlinePartyLimitAt,
   slotWindows,
   type BusyInterval,
   type SeatingTable,
@@ -139,5 +140,25 @@ describe("slotWindows", () => {
       { start: 1170, end: 1290 },
       { start: 1290, end: 1320 },
     ]);
+  });
+});
+
+describe("onlinePartyLimitAt", () => {
+  const limits = [
+    { daysOfWeek: [5, 6], from: "19:00", to: "20:00", maxParty: 6 },
+    { daysOfWeek: [6], from: "19:30", to: "19:45", maxParty: 4 },
+  ];
+
+  it("applies between the two times, both included, on the chosen days", () => {
+    expect(onlinePartyLimitAt(limits, 5, 18 * 60 + 45)).toBeNull();
+    expect(onlinePartyLimitAt(limits, 5, 19 * 60)).toBe(6);
+    expect(onlinePartyLimitAt(limits, 5, 20 * 60)).toBe(6);
+    expect(onlinePartyLimitAt(limits, 5, 20 * 60 + 15)).toBeNull();
+    expect(onlinePartyLimitAt(limits, 4, 19 * 60 + 30)).toBeNull();
+  });
+
+  it("takes the strictest of overlapping limits", () => {
+    expect(onlinePartyLimitAt(limits, 6, 19 * 60 + 30)).toBe(4);
+    expect(onlinePartyLimitAt(limits, 6, 19 * 60 + 50)).toBe(6);
   });
 });

@@ -1,9 +1,32 @@
 import { z } from "zod";
-import { checkMinMax, optionalText } from "./common.js";
+import { timeToMinutes } from "../time.js";
+import { checkMinMax, covers, optionalText, timeString } from "./common.js";
 
 export const CONFIRMATION_MODES = ["auto", "manual", "auto_up_to"] as const;
 export const LARGE_PARTY_MODES = ["request", "phone_only"] as const;
 export const SLOT_INTERVALS = [5, 10, 15, 20, 30, 60] as const;
+
+/**
+ * "Arrivals from 19:00 to 20:00 (both included): online at most 6 people". Only online bookings are
+ * limited; staff can still seat bigger parties.
+ */
+export const onlinePartyLimit = z
+  .object({
+    /** ISO weekdays, Monday = 1 ... Sunday = 7. */
+    daysOfWeek: z
+      .array(z.number().int().min(1).max(7))
+      .min(1, { message: "Seleziona almeno un giorno" })
+      .refine((days) => new Set(days).size === days.length, { message: "Giorni duplicati" }),
+    from: timeString,
+    to: timeString,
+    maxParty: covers,
+  })
+  .refine((limit) => timeToMinutes(limit.from) <= timeToMinutes(limit.to), {
+    path: ["to"],
+    message: "L'orario finale deve venire dopo quello iniziale",
+  });
+
+export type OnlinePartyLimit = z.infer<typeof onlinePartyLimit>;
 
 export const bookingPolicyFields = z.object({
   /** Master switch for the public booking page / widget. */
@@ -42,6 +65,8 @@ export const bookingPolicyFields = z.object({
   emailStaffBookings: z.boolean(),
   /** Email a reminder the day before. */
   sendReminders: z.boolean(),
+  /** Smaller party limits for some arrival times (see `onlinePartyLimitAt`). */
+  onlinePartyLimits: z.array(onlinePartyLimit).max(30),
 });
 
 export function checkBookingPolicy(value: z.infer<typeof bookingPolicyFields>, ctx: z.RefinementCtx) {
@@ -87,4 +112,5 @@ export const DEFAULT_BOOKING_POLICY: BookingPolicy = {
   policyText: null,
   emailStaffBookings: true,
   sendReminders: true,
+  onlinePartyLimits: [],
 };

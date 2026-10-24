@@ -1,0 +1,1 @@
+ALTER TABLE "booking_policies" ADD COLUMN "online_party_limits" jsonb DEFAULT '[]'::jsonb NOT NULL;

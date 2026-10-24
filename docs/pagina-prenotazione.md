@@ -46,6 +46,16 @@ Due codici da copiare, sempre nella stessa schermata:
 Solo le pagine `/prenota/*` possono stare dentro un iframe; il gestionale lo vieta
 (`frame-ancestors 'none'`).
 
+## QR code
+
+Nella stessa schermata c'è il **QR code** della pagina (libreria `qrcode`, generato nel browser), nel
+colore del ristorante se è abbastanza scuro, altrimenti quasi nero perché le fotocamere lo leggano:
+
+- **Stampa cartoncino**: un cartoncino con nome del locale, "Prenota il tuo tavolo", il QR e il link;
+- **Scarica PNG** (1200 px, per tipografie e social) e **Scarica SVG** (vettoriale, per il grafico).
+
+Il QR contiene l'indirizzo della pagina: se si cambia l'indirizzo va ristampato.
+
 ## Come prenota il cliente
 
 1. **Persone**: già impostato su 2. Oltre il massimo online, a seconda delle regole il cliente invia
@@ -138,5 +148,5 @@ Per lo staff: `GET`/`PATCH /restaurants/:id/booking-page` e `POST /restaurants/:
 
 ## Da fare
 
-Pagina ed email in inglese, dominio personalizzato del ristorante, QR code da stampare, orario del
-promemoria scelto dal ristorante.
+Pagina ed email in inglese, dominio personalizzato del ristorante, orario del promemoria scelto dal
+ristorante.

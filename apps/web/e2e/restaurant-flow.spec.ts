@@ -217,6 +217,7 @@ test("from sign-up to a full service", async ({ page, browser }, testInfo) => {
   await expect(page.getByRole("img", { name: "Logo", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Salva", exact: true }).click();
   await expect(page.getByText("Pagina di prenotazione salvata")).toBeVisible();
+  await expect(page.getByTestId("booking-qr").locator("svg")).toBeVisible();
   await shot("10-pagina-prenotazione");
   const link = (await page.getByTestId("booking-link").textContent())!;
 
@@ -337,6 +338,13 @@ test("a guest moves and cancels their booking from the email link", async ({ pag
   await page.getByRole("button", { name: "Usa questo modello" }).click();
   await expect(page.getByRole("heading", { name: "Configurazione" })).toBeVisible();
 
+  // Between 19:00 and 20:00 groups of up to 2 only, online.
+  await page.goto("/configurazione/regole");
+  await page.getByRole("button", { name: "Aggiungi fascia" }).click();
+  await page.getByLabel("Max persone online").fill("2");
+  await page.getByRole("button", { name: "Salva regole" }).click();
+  await expect(page.getByText("Regole salvate")).toBeVisible();
+
   // A booking from the public page, as a guest would make it.
   const date = nextSaturday();
   const me = (await (await page.request.get("/api/v1/auth/me")).json()).data;
@@ -371,6 +379,8 @@ test("a guest moves and cancels their booking from the email link", async ({ pag
   await guest.getByRole("button", { name: "Modifica" }).click();
   await guest.getByRole("button", { name: "4", exact: true }).click();
   await guest.getByRole("button", { name: longDate(date), exact: true }).click();
+  await expect(guest.getByRole("button", { name: "21:00", exact: true })).toBeVisible();
+  await expect(guest.getByRole("button", { name: "19:30", exact: true })).toHaveCount(0);
   await guest.getByRole("button", { name: "21:00", exact: true }).click();
   await guest.getByRole("button", { name: /^Conferma:/ }).click();
   await expect(guest.getByText(/^Prenotazione modificata\./)).toBeVisible();

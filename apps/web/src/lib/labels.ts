@@ -46,6 +46,7 @@ export const SLOT_REASON_LABELS: Record<string, string> = {
   pacing_covers: "Troppi coperti in arrivo",
   pacing_bookings: "Troppe prenotazioni in arrivo",
   tables_taken: "Tavoli occupati",
+  party_size_limit: "Oltre il limite online della fascia",
 };
 
 export const WEEKDAYS = [

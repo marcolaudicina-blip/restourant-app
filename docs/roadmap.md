@@ -18,7 +18,7 @@ storico modifiche.
    personale con inviti e ruoli. Da fare: app per telefono
 4. ✅ **Pagina di prenotazione pubblica** con colori, logo, copertina e foto del locale, link da
    condividere, pulsante e modulo da inserire nel sito (vedi `pagina-prenotazione.md`). Da fare:
-   versione in inglese, QR code
+   versione in inglese. Fatto anche: QR code da stampare, limiti di persone per fascia oraria
 5. ✅ **Email** (Resend): conferma e richiesta ricevuta per le prenotazioni online con l'avviso del
    ristorante, prenotazioni inserite, spostate o cancellate dallo staff, promemoria il giorno prima,
    link "Gestisci la prenotazione" per modificare o disdire online con avviso allo staff
