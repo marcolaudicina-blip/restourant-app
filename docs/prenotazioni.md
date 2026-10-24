@@ -99,6 +99,9 @@ stato. Si apre già sull'ora attuale (oggi) o sulla prima prenotazione; si può 
 - **Toccare** una barra apre la prenotazione; toccare uno spazio vuoto ne crea una nuova su quel
   tavolo a quell'ora.
 - Le prenotazioni senza tavolo (richieste di gruppi) stanno in alto in "Senza tavolo".
+- Una prenotazione su **tavoli uniti** è una sola barra alta quanto le righe dei suoi tavoli (se sono
+  uno sotto l'altro nella stessa sala; altrimenti gli altri tavoli mostrano un blocco a righe
+  "occupato"). Trascinandola su o giù si spostano tutti i tavoli insieme.
 - La linea rossa è l'ora attuale. Ogni dispositivo ricorda se preferisce lista o griglia.
 
 ## Foglio del servizio

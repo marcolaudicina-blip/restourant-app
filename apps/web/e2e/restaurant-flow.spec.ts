@@ -115,8 +115,12 @@ test("from sign-up to a full service", async ({ page, browser }, testInfo) => {
   const timeline = page.getByTestId("timeline");
   await expect(timeline.getByRole("button", { name: /^Rossi, 4 persone/ })).toBeVisible();
   await shot("03b-griglia");
-  const bianchi = timeline.getByRole("button", { name: /^Bianchi, 6 persone/ }).first();
+  // Joined tables: one bar across the two rows, not one per table.
+  const bianchi = timeline.getByRole("button", { name: /^Bianchi, 6 persone/ });
+  await expect(bianchi).toHaveCount(1);
+  await expect(bianchi).toContainText("Tavoli T7+T8");
   const box = (await bianchi.boundingBox())!;
+  expect(box.height).toBeGreaterThan(70);
   await page.mouse.move(box.x + 12, box.y + box.height / 2);
   await page.mouse.down();
   await page.mouse.move(box.x + 12 + 28 * 4, box.y + box.height / 2, { steps: 8 });

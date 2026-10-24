@@ -20,9 +20,10 @@ import type { Reservation, Table } from "@/lib/types";
 import { useToast } from "../ui/toast";
 
 /*
- * The day as a grid: one row per table, one column every 15 minutes, a bar per booking. Bars are
- * dragged sideways to change the time and up or down to change the table; an empty slot opens a new
- * booking on that table at that time.
+ * The day as a grid: one row per table, one column every 15 minutes, a bar per booking. A booking on
+ * joined tables is one tall bar across their rows (when the rows are next to each other; otherwise
+ * the other tables show a striped "taken" block). Bars are dragged sideways to change the time and
+ * up or down to change the table(s); an empty slot opens a new booking on that table at that time.
  */
 
 const SLOT = 15;
@@ -43,6 +44,9 @@ type Drag = {
   dy: number;
   moved: boolean;
 };
+
+/** Drop target meaning "joined tables moved together" (see onBarUp). */
+const GROUP = "__group__";
 
 const floor15 = (m: number) => Math.floor(m / SLOT) * SLOT;
 const ceil60 = (m: number) => Math.ceil(m / 60) * 60;
@@ -96,12 +100,35 @@ export function TimelineView({
       .filter((g) => g.tables.length > 0);
   }, [config.data]);
 
+  /** Tables in the order of the rows, with their room. */
+  const rows = useMemo(
+    () => lanes.flatMap(({ room, tables }) => tables.map((table) => ({ table, roomId: room.id }))),
+    [lanes],
+  );
+
   const unassigned = visible.filter((r) => r.tableIds.length === 0);
-  const byTable = useMemo(() => {
-    const map = new Map<string, Reservation[]>();
-    for (const r of visible) for (const id of r.tableIds) map.set(id, [...(map.get(id) ?? []), r]);
-    return map;
-  }, [visible]);
+  /**
+   * Where each booking is drawn: its bar on the first of its tables, as tall as the rows it covers
+   * when they are consecutive in one room; otherwise striped blocks on the other tables.
+   */
+  const placement = useMemo(() => {
+    const index = new Map(rows.map((row, i) => [row.table.id, i]));
+    const bars = new Map<string, { reservation: Reservation; span: number }[]>();
+    const taken = new Map<string, Reservation[]>();
+    const add = <T,>(map: Map<string, T[]>, key: string, value: T) =>
+      map.set(key, [...(map.get(key) ?? []), value]);
+    for (const r of visible) {
+      const shown = r.tableIds.filter((id) => index.has(id)).sort((a, b) => index.get(a)! - index.get(b)!);
+      if (shown.length === 0) continue;
+      const first = index.get(shown[0]!)!;
+      const together = shown.every(
+        (id, i) => index.get(id) === first + i && rows[first + i]!.roomId === rows[first]!.roomId,
+      );
+      add(bars, shown[0]!, { reservation: r, span: together ? shown.length : 1 });
+      if (!together) for (const id of shown.slice(1)) add(taken, id, r);
+    }
+    return { bars, taken, index };
+  }, [visible, rows]);
 
   const slots = (range.end - range.start) / SLOT;
   const width = slots * SLOT_WIDTH;
@@ -170,6 +197,8 @@ export function TimelineView({
     fromTableId: string | null,
     toTableId: string | null,
     deltaSlots: number,
+    /** Joined tables moved together, already computed. */
+    groupTableIds: string[] | null = null,
   ) {
     const minutes = startOf(reservation) + deltaSlots * SLOT;
     if (minutes < 0 || minutes >= 1440) {
@@ -178,15 +207,17 @@ export function TimelineView({
     }
     const time = minutesToTime(minutes);
     const tableIds =
-      toTableId && toTableId !== fromTableId
-        ? [
-            ...new Set(
-              fromTableId
-                ? reservation.tableIds.map((id) => (id === fromTableId ? toTableId : id))
-                : [toTableId],
-            ),
-          ]
-        : null;
+      toTableId === GROUP
+        ? null
+        : toTableId && toTableId !== fromTableId
+          ? [
+              ...new Set(
+                fromTableId
+                  ? reservation.tableIds.map((id) => (id === fromTableId ? toTableId : id))
+                  : [toTableId],
+              ),
+            ]
+          : null;
     try {
       if (deltaSlots !== 0) {
         await withOverride(
@@ -194,14 +225,21 @@ export function TimelineView({
           ["pacing_covers", "pacing_bookings", "service_full"],
         );
       }
-      if (tableIds) {
+      const newTables = groupTableIds ?? tableIds;
+      if (newTables) {
         await withOverride(
           (force) =>
-            moveTables.mutateAsync({ id: reservation.id, tableIds, ignoreCapacity: force || undefined }),
+            moveTables.mutateAsync({
+              id: reservation.id,
+              tableIds: newTables,
+              ignoreCapacity: force || undefined,
+            }),
           ["capacity_mismatch"],
         );
       }
-      toast.success(`${reservation.guestName}: ${time}${tableIds ? `, tavolo ${tableName(tableIds)}` : ""}`);
+      toast.success(
+        `${reservation.guestName}: ${time}${newTables ? `, tavolo ${tableName(newTables)}` : ""}`,
+      );
     } catch (e) {
       toast.error(describeError(e));
     }
@@ -236,12 +274,29 @@ export function TimelineView({
     setDrag(next);
   }
 
-  function onBarUp(event: ReactPointerEvent, reservation: Reservation) {
+  function onBarUp(event: ReactPointerEvent, reservation: Reservation, span: number) {
     const current = dragRef.current;
     dragRef.current = null;
     setDrag(null);
     if (!current) return;
     if (!current.moved) return onEdit(reservation);
+    if (span > 1) {
+      // Joined tables move together, by as many rows as the bar was dragged.
+      const deltaRows = Math.round(current.dy / ROW_HEIGHT);
+      const deltaSlots = Math.round(current.dx / SLOT_WIDTH);
+      if (deltaRows === 0 && deltaSlots === 0) return;
+      let group: string[] | null = null;
+      if (deltaRows !== 0) {
+        const moved = reservation.tableIds.map((id) => rows[(placement.index.get(id) ?? -1) + deltaRows]);
+        if (moved.some((row) => !row) || new Set(moved.map((row) => row!.roomId)).size > 1) {
+          toast.error("I tavoli uniti si spostano insieme, nella stessa sala");
+          return;
+        }
+        group = moved.map((row) => row!.table.id);
+      }
+      void drop(reservation, current.fromTableId, GROUP, deltaSlots, group);
+      return;
+    }
     // The row under the pointer tells the target table.
     const target = document
       .elementsFromPoint(event.clientX, event.clientY)
@@ -264,45 +319,79 @@ export function TimelineView({
 
   // Plain render functions, not components: a component defined here would be remounted on every
   // render and lose the pointer in the middle of a drag.
-  function bar(reservation: Reservation, tableId: string | null) {
+  function bar(reservation: Reservation, tableId: string | null, span = 1) {
     const color = statusColor(reservation.status);
     const left = x(startOf(reservation));
     const barWidth = Math.max(SLOT_WIDTH, (reservation.durationMinutes / SLOT) * SLOT_WIDTH) - 2;
     const dragging = drag?.id === reservation.id && drag.fromTableId === tableId && drag.moved;
-    const others = reservation.tableIds.filter((id) => id !== tableId);
+    // Tables the bar doesn't cover itself (joined tables in other rows).
+    const others = span > 1 ? [] : reservation.tableIds.filter((id) => id !== tableId);
     return (
       <button
         key={`${reservation.id}-${tableId ?? "none"}`}
         type="button"
         onPointerDown={(e) => onBarDown(e, reservation, tableId)}
         onPointerMove={onBarMove}
-        onPointerUp={(e) => onBarUp(e, reservation)}
+        onPointerUp={(e) => onBarUp(e, reservation, span)}
         onPointerCancel={() => {
           dragRef.current = null;
           setDrag(null);
         }}
-        aria-label={`${reservation.guestName}, ${reservation.partySize} persone, ore ${reservation.time}`}
+        aria-label={`${reservation.guestName}, ${reservation.partySize} persone, ore ${reservation.time}${
+          span > 1 ? `, tavoli ${tableName(reservation.tableIds)}` : ""
+        }`}
         className={cn(
-          "absolute top-1 flex h-[36px] touch-none select-none items-center gap-1 overflow-hidden rounded-md border-l-4 px-1.5 text-left text-xs",
+          "absolute top-1 flex touch-none select-none gap-1 overflow-hidden rounded-md border-l-4 px-1.5 text-left text-xs",
+          span > 1 ? "flex-col justify-center" : "items-center",
           dragging ? "z-20 cursor-grabbing opacity-90 shadow-lg" : "z-10 cursor-grab hover:brightness-95",
         )}
         style={{
           left: left + 1,
           width: barWidth,
+          height: span * ROW_HEIGHT - 8,
           backgroundColor: `${color}2e`,
           borderLeftColor: color,
           transform: dragging ? `translate(${drag.dx}px, ${drag.dy}px)` : undefined,
         }}
       >
-        <span className="min-w-0 flex-1 truncate leading-tight">
+        <span className={cn("min-w-0 truncate leading-tight", span === 1 && "flex-1")}>
           <span className="font-semibold">{reservation.guestName}</span>
           <span className="text-ink/70"> · {reservation.partySize}</span>
           {others.length > 0 && <span className="text-ink/60"> · +{tableName(others)}</span>}
         </span>
+        {span > 1 && (
+          <span className="truncate text-[11px] leading-tight text-ink/60">
+            Tavoli {tableName(reservation.tableIds)}
+          </span>
+        )}
         {reservation.channel === "online" && (
-          <Globe className="h-3 w-3 shrink-0 text-violet-700" aria-label="Online" />
+          <Globe
+            className={cn("h-3 w-3 shrink-0 text-violet-700", span > 1 && "absolute right-1.5 top-1.5")}
+            aria-label="Online"
+          />
         )}
       </button>
+    );
+  }
+
+  /** A joined table drawn away from its booking's bar: taken, striped, opens the booking. */
+  function takenBlock(reservation: Reservation, tableId: string) {
+    const color = statusColor(reservation.status);
+    return (
+      <button
+        key={`${reservation.id}-${tableId}-taken`}
+        type="button"
+        onClick={() => onEdit(reservation)}
+        aria-label={`Unito alla prenotazione di ${reservation.guestName}`}
+        title={`Unito a ${reservation.guestName}`}
+        className="absolute top-1 z-10 h-[36px] rounded-md border border-dashed"
+        style={{
+          left: x(startOf(reservation)) + 1,
+          width: Math.max(SLOT_WIDTH, (reservation.durationMinutes / SLOT) * SLOT_WIDTH) - 2,
+          borderColor: color,
+          backgroundImage: `repeating-linear-gradient(135deg, ${color}26 0 6px, transparent 6px 12px)`,
+        }}
+      />
     );
   }
 
@@ -406,7 +495,12 @@ export function TimelineView({
                       tableId: table.id,
                       onClick: (e) => onLaneClick(e, table),
                     },
-                    (byTable.get(table.id) ?? []).map((r) => bar(r, table.id)),
+                    [
+                      ...(placement.bars.get(table.id) ?? []).map(({ reservation, span }) =>
+                        bar(reservation, table.id, span),
+                      ),
+                      ...(placement.taken.get(table.id) ?? []).map((r) => takenBlock(r, table.id)),
+                    ],
                   ),
                 )}
               </div>
