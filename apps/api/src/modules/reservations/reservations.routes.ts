@@ -12,6 +12,7 @@ import { z } from "zod";
 import { tenant } from "../../lib/context.js";
 import { idParams } from "../../lib/http.js";
 import { sendBookingEmail } from "../notifications/booking-email.service.js";
+import { getActivity } from "./activity.service.js";
 import { getAvailability } from "./availability.service.js";
 import {
   createReservation,
@@ -42,7 +43,21 @@ const listQuery = z.object({
     .pipe(z.array(z.enum(RESERVATION_STATUSES)).optional()),
 });
 
+const activityQuery = z.object({ since: z.iso.datetime({ offset: true }).optional() });
+
 export const reservationRoutes: FastifyPluginAsyncZod = async (app) => {
+  app.get(
+    "/reservations/activity",
+    { schema: { querystring: activityQuery }, config: READ },
+    async (request) => ({
+      data: await getActivity(
+        tenant(request),
+        request.query.since ? new Date(request.query.since) : null,
+        request.server.deps.now(),
+      ),
+    }),
+  );
+
   app.get("/availability", { schema: { querystring: availabilityQuery }, config: READ }, async (request) => ({
     data: await getAvailability(tenant(request), request.query, request.server.deps.now()),
   }));

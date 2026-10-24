@@ -202,8 +202,14 @@ test("from sign-up to a full service", async ({ page, browser }, testInfo) => {
   await guest.screenshot({ path: testInfo.outputPath("11-prenotazione-online.png"), fullPage: true });
   await guestContext.close();
 
+  // The staff device, left open on another screen, announces it within a few seconds.
+  const alert = page.getByRole("status").filter({ hasText: "Nuova prenotazione online" });
+  await expect(alert).toContainText("Verdi", { timeout: 15_000 });
+  await page.screenshot({ path: testInfo.outputPath("12-avviso.png") });
+  await alert.getByRole("link", { name: "Apri la giornata" }).click();
+
   // Staff see it, marked as online.
-  await page.goto(`/prenotazioni?data=${date}`);
+  await expect(page).toHaveURL(new RegExp(`data=${date}`));
   const verdi = page.getByRole("listitem").filter({ hasText: "Verdi" });
   await expect(verdi).toContainText("Online");
   await expect(verdi).toContainText("21:30");

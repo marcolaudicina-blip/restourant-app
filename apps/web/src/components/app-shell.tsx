@@ -19,6 +19,7 @@ import { ROLE_LABELS } from "@/lib/labels";
 import { useMe } from "@/lib/queries";
 import { rememberRestaurant, rememberedRestaurant, RestaurantProvider } from "@/lib/restaurant";
 import type { Restaurant } from "@/lib/types";
+import { ActivityProvider, usePendingRequests } from "./activity";
 import { Button } from "./ui/button";
 import { EmptyState } from "./ui/card";
 import { PageLoader } from "./ui/spinner";
@@ -69,59 +70,62 @@ export function AppShell({ children }: { children: ReactNode }) {
       role={membership.role}
       timezone={restaurant.data.timezone}
     >
-      <div className="min-h-dvh md:pl-60">
-        <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-line bg-surface md:flex">
-          <div className="flex items-center gap-2 px-5 py-5 text-brand-700">
-            <UtensilsCrossed className="h-6 w-6" />
-            <span className="text-lg font-semibold tracking-tight">Restourant</span>
-          </div>
-          <div className="px-3">
-            {memberships.length > 1 ? (
-              <select
-                value={membership.restaurantId}
-                onChange={(e) => {
-                  rememberRestaurant(e.target.value);
-                  setSelected(e.target.value);
-                }}
-                className="w-full rounded-lg border border-line bg-canvas px-2 py-2 text-sm font-medium"
-                aria-label="Ristorante"
-              >
-                {memberships.map((m) => (
-                  <option key={m.restaurantId} value={m.restaurantId}>
-                    {m.restaurantName}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <p className="truncate rounded-lg bg-canvas px-3 py-2 text-sm font-medium">
-                {restaurant.data.name}
-              </p>
-            )}
-          </div>
-          <Nav className="mt-4 flex-1 flex-col px-3" />
-          <div className="border-t border-line p-3">
-            <Link href="/account" className="block rounded-lg px-2 py-1 hover:bg-black/5">
-              <p className="truncate text-sm font-medium">{me.data?.user.fullName}</p>
-              <p className="text-xs text-muted">{ROLE_LABELS[membership.role]} · Il mio account</p>
-            </Link>
-            <Button variant="ghost" size="sm" onClick={logout} className="mt-2 w-full">
-              <LogOut className="h-4 w-4" /> Esci
-            </Button>
-          </div>
-        </aside>
+      <ActivityProvider>
+        <div className="min-h-dvh md:pl-60">
+          <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-line bg-surface md:flex">
+            <div className="flex items-center gap-2 px-5 py-5 text-brand-700">
+              <UtensilsCrossed className="h-6 w-6" />
+              <span className="text-lg font-semibold tracking-tight">Restourant</span>
+            </div>
+            <div className="px-3">
+              {memberships.length > 1 ? (
+                <select
+                  value={membership.restaurantId}
+                  onChange={(e) => {
+                    rememberRestaurant(e.target.value);
+                    setSelected(e.target.value);
+                  }}
+                  className="w-full rounded-lg border border-line bg-canvas px-2 py-2 text-sm font-medium"
+                  aria-label="Ristorante"
+                >
+                  {memberships.map((m) => (
+                    <option key={m.restaurantId} value={m.restaurantId}>
+                      {m.restaurantName}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <p className="truncate rounded-lg bg-canvas px-3 py-2 text-sm font-medium">
+                  {restaurant.data.name}
+                </p>
+              )}
+            </div>
+            <Nav className="mt-4 flex-1 flex-col px-3" />
+            <div className="border-t border-line p-3">
+              <Link href="/account" className="block rounded-lg px-2 py-1 hover:bg-black/5">
+                <p className="truncate text-sm font-medium">{me.data?.user.fullName}</p>
+                <p className="text-xs text-muted">{ROLE_LABELS[membership.role]} · Il mio account</p>
+              </Link>
+              <Button variant="ghost" size="sm" onClick={logout} className="mt-2 w-full">
+                <LogOut className="h-4 w-4" /> Esci
+              </Button>
+            </div>
+          </aside>
 
-        <main className="mx-auto max-w-7xl px-4 pb-24 pt-5 md:px-8 md:pb-10 md:pt-8">{children}</main>
+          <main className="mx-auto max-w-7xl px-4 pb-24 pt-5 md:px-8 md:pb-10 md:pt-8">{children}</main>
 
-        <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface md:hidden">
-          <Nav className="justify-around px-2 py-1.5" compact />
-        </nav>
-      </div>
+          <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface md:hidden">
+            <Nav className="justify-around px-2 py-1.5" compact />
+          </nav>
+        </div>
+      </ActivityProvider>
     </RestaurantProvider>
   );
 }
 
 function Nav({ className, compact = false }: { className?: string; compact?: boolean }) {
   const pathname = usePathname();
+  const pending = usePendingRequests().length;
   return (
     <div className={cn("flex gap-1", className)}>
       {(compact ? [...NAV, ...MOBILE_EXTRA] : NAV).map(({ href, label, icon: Icon }) => {
@@ -136,7 +140,17 @@ function Nav({ className, compact = false }: { className?: string; compact?: boo
               active ? "bg-brand-50 text-brand-700" : "text-muted hover:bg-black/5 hover:text-ink",
             )}
           >
-            <Icon className="h-5 w-5" />
+            <span className="relative">
+              <Icon className="h-5 w-5" />
+              {href === "/prenotazioni" && pending > 0 && (
+                <span
+                  className="absolute -right-2 -top-1.5 min-w-4 rounded-full bg-violet-600 px-1 text-center text-[10px] font-semibold leading-4 text-white"
+                  aria-label={`${pending} richieste da confermare`}
+                >
+                  {pending}
+                </span>
+              )}
+            </span>
             {label}
           </Link>
         );

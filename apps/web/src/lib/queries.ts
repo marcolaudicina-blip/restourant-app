@@ -55,13 +55,14 @@ export function useTeam() {
   });
 }
 
-/** Reservations of a day. Refreshed every 20 seconds so every device in the room stays in sync. */
+/** Reservations of a day. Devices stay in sync through the activity watcher (components/activity.tsx). */
 export function useReservations(date: string) {
   const { restaurantId, base } = useRestaurant();
   return useQuery({
     queryKey: keys.reservations(restaurantId, date),
     queryFn: () => api<Reservation[]>(`${base}/reservations?date=${date}`),
-    refetchInterval: 20_000,
+    // The activity watcher refreshes as soon as something changes; this is only a fallback.
+    refetchInterval: 60_000,
   });
 }
 
@@ -107,11 +108,13 @@ export function useTemplates() {
 /**
  * Mutation against the current restaurant that refreshes what it may have changed.
  * `invalidate` lists the query families to refresh: "config", "reservations", "availability",
- * "restaurant", "guests".
+ * "restaurant", "guests", "activity".
  */
 export function useRestaurantMutation<TVars, TResult = unknown>(
   request: (base: string, vars: TVars) => Promise<TResult>,
-  invalidate: ("config" | "reservations" | "availability" | "restaurant" | "guests")[] = ["config"],
+  invalidate: ("config" | "reservations" | "availability" | "restaurant" | "guests" | "activity")[] = [
+    "config",
+  ],
 ) {
   const { base, restaurantId } = useRestaurant();
   const queryClient = useQueryClient();

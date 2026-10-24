@@ -69,6 +69,7 @@ export const reservations = pgTable(
     index().on(t.guestId),
     index().on(t.restaurantId, t.date),
     index().on(t.restaurantId, t.startsAt),
+    index().on(t.restaurantId, t.updatedAt),
     check("reservations_party_size", sql`${t.partySize} >= 1`),
     check("reservations_window", sql`${t.endsAt} > ${t.startsAt}`),
   ],

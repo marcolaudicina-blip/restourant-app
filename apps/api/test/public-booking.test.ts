@@ -356,3 +356,36 @@ describe("confirmation notice and emails", () => {
     expect(ctx.sentEmails).toHaveLength(before);
   });
 });
+
+describe("activity for the staff devices", () => {
+  const activity = (since?: string) =>
+    owner.api.get(`${owner.base}/reservations/activity${since ? `?since=${encodeURIComponent(since)}` : ""}`);
+
+  it("reports new online bookings, requests to confirm and when anything changed", async () => {
+    const first = (await activity()).body.data;
+    expect(first).toMatchObject({ lastChangeAt: null, newOnline: [], pendingRequests: [] });
+
+    await policy({ confirmationMode: "manual" });
+    const booked = await book();
+    const next = (await activity(first.serverTime)).body.data;
+    expect(next.newOnline).toMatchObject([
+      { id: booked.body.data.id, guestName: "Lucia Verdi", partySize: 2, date: SATURDAY, time: "20:00" },
+    ]);
+    expect(next.pendingRequests.map((r: { id: string }) => r.id)).toEqual([booked.body.data.id]);
+    expect(next.lastChangeAt).not.toBeNull();
+
+    // Already seen: not reported again.
+    const again = (await activity(next.serverTime)).body.data;
+    expect(again.newOnline).toEqual([]);
+
+    // Moving the booking to another table counts as a change for the other devices.
+    await new Promise((r) => setTimeout(r, 5));
+    await owner.api.put(`${owner.base}/reservations/${booked.body.data.id}/tables`, { tableIds: [t.T3!.id] });
+    const moved = (await activity(again.serverTime)).body.data;
+    expect(new Date(moved.lastChangeAt).getTime()).toBeGreaterThan(new Date(next.lastChangeAt).getTime());
+
+    // Confirmed requests leave the list.
+    await owner.api.post(`${owner.base}/reservations/${booked.body.data.id}/status`, { status: "confirmed" });
+    expect((await activity()).body.data.pendingRequests).toEqual([]);
+  });
+});

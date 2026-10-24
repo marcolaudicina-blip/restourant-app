@@ -207,3 +207,21 @@ export type PendingInvitation = {
   createdAt: string;
 };
 export type Team = { members: TeamMember[]; invitations: PendingInvitation[] };
+
+// Activity -------------------------------------------------------------------------------------
+
+export type ActivityBrief = {
+  id: string;
+  guestName: string;
+  partySize: number;
+  date: string;
+  time: string;
+  status: ReservationStatus;
+};
+
+export type Activity = {
+  serverTime: string;
+  lastChangeAt: string | null;
+  newOnline: ActivityBrief[];
+  pendingRequests: ActivityBrief[];
+};

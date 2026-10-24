@@ -30,7 +30,7 @@ export function useStatusMutation() {
         method: "POST",
         body: { status: vars.status },
       }),
-    ["reservations", "availability", "guests"],
+    ["reservations", "availability", "guests", "activity"],
   );
   return (id: string, status: ReservationStatus) =>
     mutation.mutate(

@@ -92,8 +92,10 @@ pnpm db:migrate      # applies migrations to $DATABASE_URL
 - `RestaurantProvider` (src/lib/restaurant.tsx) exposes the current restaurant, its time zone and
   `can(permission)`. Queries live in `src/lib/queries.ts`; mutations go through `useRestaurantMutation`
   (or `useConfigSave` on configuration screens), which invalidates the affected query families.
-- The selected day is in the URL (`?data=YYYY-MM-DD`, `useSelectedDate`). Reservations refetch every 20s
-  so devices in the room stay in sync (no websockets yet).
+- The selected day is in the URL (`?data=YYYY-MM-DD`, `useSelectedDate`). Devices stay in sync through
+  `ActivityProvider` (components/activity.tsx): it polls `GET /reservations/activity` every 10 s,
+  refreshes reservation queries when `lastChangeAt` moves, alerts (banner + chime) on new online
+  bookings and exposes the requests waiting for confirmation (no websockets: serverless-friendly).
 - `/api/session` opens every session (login, register, accept-invitation, reset-password,
   change-password) so the token only lives in the httpOnly cookie.
 - `/prenota/[slug]` is the public booking page (`components/booking`), open to everyone and the only

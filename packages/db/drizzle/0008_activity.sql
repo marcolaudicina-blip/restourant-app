@@ -1,0 +1,1 @@
+CREATE INDEX "reservations_restaurant_id_updated_at_index" ON "reservations" USING btree ("restaurant_id","updated_at");

@@ -511,6 +511,8 @@ export async function setReservationTables(
   }
   await inTransaction(ctx, async (tx) => {
     await writeTables(tx, current, input.tableIds);
+    // Moving tables is a change other devices must pick up (see getActivity).
+    await tx.db.update(reservations).set({ updatedAt: new Date() }).where(eq(reservations.id, id));
     await recordAudit(tx, {
       entity: "reservation",
       entityId: id,

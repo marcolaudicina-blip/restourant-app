@@ -12,6 +12,7 @@ import { Button } from "../ui/button";
 import { Card, EmptyState, PageHeader } from "../ui/card";
 import { Input } from "../ui/field";
 import { PageLoader } from "../ui/spinner";
+import { PendingRequests } from "./pending-requests";
 import { ReservationDialog } from "./reservation-dialog";
 import { ReservationRow } from "./reservation-row";
 
@@ -70,6 +71,8 @@ export function ReservationsView() {
           </>
         }
       />
+
+      <PendingRequests />
 
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Prenotazioni" value={counted.length} />
